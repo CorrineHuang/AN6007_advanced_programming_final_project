@@ -38,6 +38,7 @@ def generate_meter_readings(meter_id, start_date, end_date):
         for timestamp, meter_reading in zip(timestamps, meter_readings)
     ]
     
+
     return {meter_id: data}
 
 
