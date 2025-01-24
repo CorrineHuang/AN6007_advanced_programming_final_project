@@ -1,6 +1,6 @@
 import pandas as pd
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 
@@ -17,12 +17,12 @@ class Meter():
             f"ID: {self.ID}\n"
             f"Date: {self.date}\n"
             f"Time: {self.time}\n"
-            f"Meter_Reading: {self.meter_reading:.2f}\n\n"
+            f"Meter_Reading: {self.meter_reading}\n\n"
         )
 
 
 # Generate half-hourly electricity meter readings
-def generate_meter_readings(meter_id, start_date, end_date):
+def generate_meter_readings(meter_id, start_date=datetime.now(ZoneInfo("Asia/Singapore"))- timedelta(days=30), end_date=datetime.now(ZoneInfo("Asia/Singapore"))):
     timestamps = pd.date_range(start = start_date, end = end_date, freq = '30min')  # Generate half-hourly timestamps
     
     # Generate cumulative meter readings
@@ -34,12 +34,12 @@ def generate_meter_readings(meter_id, start_date, end_date):
     
     # Create a list of Meter objects (OOP)
     data = [
-        Meter(meter_id, timestamp.date(), timestamp.time(), meter_reading)
+        Meter(meter_id, str(timestamp.date()), str(timestamp.time()), str(round(meter_reading,2)))
         for timestamp, meter_reading in zip(timestamps, meter_readings)
     ]
     
 
-    return {meter_id: data}
+    return {meter_id : data}
 
 
 if __name__ == "__main__":
