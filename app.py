@@ -7,9 +7,15 @@ from meter_readings_generation import generate_meter_readings
 app = Flask("__name__")
 
 # 1. mian page
-@app.route("/main", methods = ["GET", "POST"])
+@app.route("/", methods = ["GET", "POST"])
 def main():
     return
+
+# 2. xxx
+@app.route("/xxxx", methods = ["GET", "POST"])
+def xxx():
+    return
+
 
 
 
@@ -22,4 +28,4 @@ if __name__ == "__main__":
     # print(meter_readings)
 
 
-    # app.run()
+    app.run()
