@@ -34,7 +34,7 @@ def generate_meter_readings(meter_id, start_date=datetime.now(ZoneInfo("Asia/Sin
     
     # Create a list of Meter objects (OOP)
     data = [
-        Meter(meter_id, str(timestamp.date()), str(timestamp.time()), str(round(meter_reading,2)))
+        Meter(meter_id, str(timestamp.date()), str(timestamp.time()), f"{round(meter_reading,2):.2f}")
         for timestamp, meter_reading in zip(timestamps, meter_readings)
     ]
     
