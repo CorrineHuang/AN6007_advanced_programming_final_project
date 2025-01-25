@@ -22,7 +22,7 @@ class Meter():
 
 
 # Generate half-hourly electricity meter readings
-def generate_meter_readings(meter_id, start_date=datetime.now(ZoneInfo("Asia/Singapore"))- timedelta(days=30), end_date=datetime.now(ZoneInfo("Asia/Singapore"))):
+def generate_meter_readings(meter_id, start_date=datetime.now(ZoneInfo("Asia/Singapore")).date() - timedelta(days=30), end_date=datetime.now(ZoneInfo("Asia/Singapore")).date()):
     timestamps = pd.date_range(start = start_date, end = end_date, freq = '30min')  # Generate half-hourly timestamps
     
     # Generate cumulative meter readings

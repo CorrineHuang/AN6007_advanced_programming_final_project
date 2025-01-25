@@ -17,7 +17,15 @@ def find_meter(meter_id):
 # 1. main page
 @app.route("/", methods = ["GET", "POST"])
 def main():
-    return jsonify({"message": "THIS API IS WORKING!"}), 200
+    jsonify({"message": "THIS API IS WORKING!"}), 200
+    return '''
+        <html>
+            <body>
+                <h1>THIS API IS WORKING!</h1>
+                <button onclick="location.href='/meter/999'" type="button">get_meter method: /meter/999</button>
+            </body>
+        </html>
+    '''
 
 # 2. Get a meter readings by meter ID
 @app.route('/meter/<value>', methods=['GET'])
