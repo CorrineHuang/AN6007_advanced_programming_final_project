@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from meter_readings_generation import generate_meter_readings
+from utils import pretty_jsonify
 
 sys.path.append(os.getcwd())
 
@@ -32,8 +33,8 @@ def main():
 def get_meter(value):
     meter_readings = find_meter(value)
     if meter_readings:
-        return jsonify([meter.__dict__ for meter in meter_readings]), 200
-    return jsonify({"error": "Meter not found"}), 404
+        return pretty_jsonify([meter.__dict__ for meter in meter_readings]), 200
+    return pretty_jsonify({"error": "Meter not found"}), 404
 
 
 
