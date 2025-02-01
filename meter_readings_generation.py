@@ -31,7 +31,10 @@ class MeterReading():
     @staticmethod
     def to_dataframe(meter_readings_list):
         """Convert a list of MeterReading objects to a DataFrame"""
-        return pd.DataFrame([mr.to_dict() for mr in meter_readings_list])
+        df = pd.DataFrame([mr.to_dict() for mr in meter_readings_list])
+        df['date'] = pd.to_datetime(df['date'])
+        df['meter_reading'] = df['meter_reading'].astype(float)
+        return df
 
 
 # Generate half-hourly electricity meter readings

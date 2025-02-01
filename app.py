@@ -53,8 +53,10 @@ def get_monthly_meter_readings(id):
     meter_readings = generate_meter_readings(id) # keys = ['999']
     if meter_readings:
         df = MeterReading.to_dataframe(meter_readings[id])
+        # Should this be its own helper method? If its reusable in future, yes
+        monthly_avg = df.groupby(df['date'].dt.strftime('%Y-%m'))['meter_reading'].mean().round(2)
         print(df.head())
-        return pretty_jsonify([meter.__dict__ for meter in meter_readings[id]]), 200
+        return pretty_jsonify({'meter_reading': id, 'monthly_average': monthly_avg.to_dict() }), 200
     return pretty_jsonify({"error": f"Meter {id} not found"}), 404
 
 
