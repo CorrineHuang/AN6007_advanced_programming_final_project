@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 
-# Define the Meter class
-class Meter():
+# Define the MeterReading class
+class MeterReading():
     def __init__(self, ID, date, time, meter_reading):
         self.ID = ID
         self.date = date
@@ -19,10 +19,38 @@ class Meter():
             f"Time: {self.time}\n"
             f"Meter_Reading: {self.meter_reading}\n\n"
         )
+    
+    def to_dict(self):
+        return {
+            'ID': self.ID,
+            'date': self.date,
+            'time': self.time,
+            'meter_reading': self.meter_reading
+        }
+    
+    @staticmethod
+    def to_dataframe(meter_readings_list):
+        """Convert a list of MeterReading objects to a DataFrame"""
+        return pd.DataFrame([mr.to_dict() for mr in meter_readings_list])
 
 
 # Generate half-hourly electricity meter readings
+# Must review again as the purpose of this function is unclear due to lack of actual test data - will it generate data for one meter or for all? Will this change once Mr Koh gives us actual data
 def generate_meter_readings(meter_id, start_date=datetime.now(ZoneInfo("Asia/Singapore")).date() - timedelta(days=30), end_date=datetime.now(ZoneInfo("Asia/Singapore")).date()):
+    """
+    Generate a series of meter readings taken every 30 minutes for a given meter ID between the specified start and end dates.
+
+    Args:
+        meter_id (str): The unique identifier for the meter.
+        start_date (datetime, optional): The start date for generating readings. 
+            Defaults to 30 days before the current date.
+        end_date (datetime, optional): The end date for generating readings. 
+            Defaults to the current date.
+
+    Returns:
+        dict: {meter_id: MeterReading} A dictionary with the meter_id as the key and a list of MeterReading objects as the value. Each MeterReading object contains the meter ID, date, 
+        time, and the formatted meter reading.
+    """
     timestamps = pd.date_range(start = start_date, end = end_date, freq = '30min')  # Generate half-hourly timestamps
     
     # Generate cumulative meter readings
@@ -34,10 +62,9 @@ def generate_meter_readings(meter_id, start_date=datetime.now(ZoneInfo("Asia/Sin
     
     # Create a list of Meter objects (OOP)
     data = [
-        Meter(meter_id, str(timestamp.date()), str(timestamp.time()), f"{round(meter_reading,2):.2f}")
+        MeterReading(meter_id, str(timestamp.date()), str(timestamp.time()), f"{round(meter_reading,2):.2f}")
         for timestamp, meter_reading in zip(timestamps, meter_readings)
     ]
-    
 
     return {meter_id : data}
 
