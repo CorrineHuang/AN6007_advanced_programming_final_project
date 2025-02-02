@@ -9,7 +9,7 @@ from flask import Flask, jsonify
 from meter_readings_generation import generate_meter_readings, MeterReading
 from utils import pretty_jsonify
 import pandas as pd
-
+import uuid 
 
 sys.path.append(os.getcwd())
 
@@ -36,6 +36,23 @@ def main():
             </body>
         </html>
     '''
+
+
+meters = {}
+@app.route('/register', methods=['POST'])
+def register_meter():
+    meter_id = str(uuid.uuid4()).replace("-", "")[:11]  # The format is ：999-999-999
+    meter_id = f"{meter_id[:3]}-{meter_id[3:6]}-{meter_id[6:9]}"
+    
+    meters[meter_id] = {
+        "readings": [], 
+        "registration_time": pd.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    with open("meter_logs.txt", "a") as log_file:
+        log_file.write(f"Registered meter: {meter_id} at {meters[meter_id]['registration_time']}\n")
+    
+    return jsonify({"meter_id": meter_id}), 201
 
 
 # 2. Get all meter readings by meter ID
