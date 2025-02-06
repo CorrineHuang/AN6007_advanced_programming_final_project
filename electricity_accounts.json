@@ -1,0 +1,14 @@
+[
+    {
+        "meter_id": "999-999-999",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "abc"
+    },
+    {
+        "meter_id": "999-999-993",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "xyz"
+    }
+]
