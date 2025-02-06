@@ -1,36 +1,52 @@
 import os
 import re
 import random
+from typing import List
 import pandas as pd
-from flask import Flask, request, jsonify
+from flask import Flask, json, request, jsonify
+from Electricity_account import ElectricityAccount
 
 app = Flask(__name__)
+file_path = os.path.join(os.getcwd(), 'electricity_accounts.json')
 
 # Load all current meter accounts from file
-def load_meters_from_file(file_name='meters.txt'):
+def load_electricity_accounts_from_file():
     meters_list = []
-    file_path = os.path.join(os.getcwd(), file_name)
-    try:
-        with open(file_path, "r") as file:
-            for line in file:
-                meter_id = line.strip()
-                if meter_id:
-                    meters_list.append(meter_id)
-    except FileNotFoundError:
-        print(f"Warning: {file_path} not found. Please check.")
+
+    # Check if the file exists; if it doesn't, create it with an empty list.
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as file:
+            json.dump([], file)
+
+    # Now safely load the JSON data
+    with open(file_path, "r") as file:
+        meters_list = json.load(file)
+
     return meters_list
 
 # Save a new meter to the file
-def save_meter_to_file(meter_id, file_name='meters.txt'):
-    with open(file_name, "a") as file:
-        file.write(meter_id + "\n")
+def save_electricity_accounts_to_file(electricity_account: ElectricityAccount):
+    # Build a set of meter IDs from the list of accounts (only once)
+    registered_meter_ids = {account.id for account in meters}
+
+    # Then, checking membership can be done as:
+    if electricity_account.meter_id in registered_meter_ids:
+        return False, "Meter ID already registered"
+
+    # Create the ElectricityAccount
+    meters.append(electricity_account)
+    accounts_dict = [account.to_dict() for account in meters]
+
+    with open(file_path, 'w') as f:
+        json.dump(accounts_dict, f, indent=4)
+    return True, "Meter registered successfully"
 
 # Validate meter ID format (XXX-XXX-XXX, digits only)
 def is_valid_meter_id(meter_id):
     return bool(re.fullmatch(r"\d{3}-\d{3}-\d{3}", meter_id))
 
 # Global list of meters
-meters = load_meters_from_file()
+meters = load_electricity_accounts_from_file()
 
 # --- FRONTEND MAIN PAGE ---
 @app.route("/", methods=["GET"])
@@ -115,27 +131,34 @@ def main():
 
 # --- BACKEND ROUTES ---
 
+# expect input:
+# meter id
+# region
+# area
+# dwelling type
 @app.route('/register', methods=['POST'])
-def register_meter():
+def register():
     data = request.get_json()
-    user_meter_id = data.get("meter_id")
+    meter_id = data.get("meter_id")
 
-    if not user_meter_id:
+    if not meter_id:
         return jsonify({"message": "Please enter a Meter ID"}), 400
-    if not is_valid_meter_id(user_meter_id):
+
+    if not is_valid_meter_id(meter_id):
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), 400
 
-    if user_meter_id in meters:
+    if meter_id in meters:
         return jsonify({
-            "meter_id": user_meter_id,
+            "meter_id": meter_id,
             "message": "The Meter is already registered. You can view your data."
         }), 200
 
     # Register new meter
-    meters.append(user_meter_id)
-    save_meter_to_file(user_meter_id)
-    
-    return jsonify({"meter_id": user_meter_id, "message": "Meter Registered Successfully!"}), 201
+    new_account = ElectricityAccount(meter_id=data.get("meter_id"), area=data.get("area"), region=data.get("region"), dwelling_type=data.get("dwelling_type"))
+
+    save_electricity_accounts_to_file(new_account)
+
+    return jsonify({"meter_id": meter_id, "message": "Meter Registered Successfully!"}), 201
 
 @app.route('/generate_readings/<meter_id>', methods=['GET'])
 def generate_readings(meter_id):
