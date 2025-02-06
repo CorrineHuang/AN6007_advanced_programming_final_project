@@ -1,13 +1,16 @@
+from datetime import datetime
 import os
 import re
 import random
 import pandas as pd
 from flask import Flask, json, request, jsonify
+from http import HTTPStatus
 import json
 from models.electricity_account import ElectricityAccount
+from utils import save_to_daily_csv
 
 app = Flask(__name__)
-file_path = os.path.join(os.getcwd(), 'electricity_accounts.json')
+file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 
 def load_electricity_accounts_from_file():
     """Load all meter accounts from file"""
@@ -143,7 +146,7 @@ def register():
     meter_id = data.get("meter_id")
 
     if not meter_id:
-        return jsonify({"message": "Please provide a meter Id, in the format XXX-XXX-XXX (digits only)"}), 400
+        return jsonify({"message": "Please provide a meter Id, in the format XXX-XXX-XXX (digits only)"}), HTTPStatus.BAD_REQUEST
 
     if not is_valid_meter_id(meter_id):
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), 400
@@ -154,7 +157,7 @@ def register():
         return jsonify({
             "meter_id": meter_id,
             "message": "This meter is already registered."
-        }), 409
+        }), HTTPStatus.CONFLICT
 
     # Create and save new account
     new_account = ElectricityAccount(
@@ -167,12 +170,56 @@ def register():
     success, message = save_electricity_accounts_to_file(new_account)
 
     if not success:
-        return jsonify({"message": message}), 400
+        return jsonify({"message": message}), HTTPStatus.BAD_REQUEST
 
     return jsonify({
         "meter_id": meter_id,
         "message": "Meter Registered Successfully!"
-    }), 201
+    }), HTTPStatus.CREATED
+
+
+@app.route('/meter-reading', methods=['POST'])
+async def meter_reading():
+    try:
+        # Get form data
+        meter_id = request.form.get('meter_id')
+        date = request.form.get('date')
+        time = request.form.get('time')
+        electricity_reading = request.form.get('electricity_reading')
+
+        # Basic validation
+        if not all([meter_id, date, time, electricity_reading]):
+            return {"error": "All fields are required"}, HTTPStatus.BAD_REQUEST
+
+        # Check if meter exists
+        existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
+        if existing_meter == None:
+            return {"error": "Meter does not exist!"}, HTTPStatus.FORBIDDEN
+
+        # Validate date format (DD-MM-YYYY)
+        try:
+            datetime.strptime(date, '%d-%m-%Y')
+        except ValueError:
+            return {"error": "Invalid date format. Use DD-MM-YYYY"}, HTTPStatus.BAD_REQUEST
+
+        # Validate time format (HH:MM:SS)
+        try:
+            datetime.strptime(time, '%H:%M:%S')
+        except ValueError:
+            return {"error": "Invalid time format. Use HH:MM:SS"}, HTTPStatus.BAD_REQUEST
+
+        # Validate electricity reading is a number
+        try:
+            float(electricity_reading)
+        except ValueError:
+            return {"error": "Electricity reading must be a number"}, HTTPStatus.BAD_REQUEST
+
+        # Save to CSV if all validations pass
+        await save_to_daily_csv([meter_id, date, time, electricity_reading])
+        return {"message": "Reading saved successfully"}, HTTPStatus.ACCEPTED
+
+    except Exception as e:
+        return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
 @app.route('/generate_readings/<meter_id>', methods=['GET'])
 def generate_readings(meter_id):
