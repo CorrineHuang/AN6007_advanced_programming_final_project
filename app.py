@@ -4,7 +4,7 @@ import random
 import pandas as pd
 from flask import Flask, json, request, jsonify
 import json
-from Electricity_account import ElectricityAccount
+from models.electricity_account import ElectricityAccount
 
 app = Flask(__name__)
 file_path = os.path.join(os.getcwd(), 'electricity_accounts.json')
