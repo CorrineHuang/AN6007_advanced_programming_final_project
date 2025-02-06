@@ -1,64 +1,197 @@
-"""Flask App for Electricity Meter Routes and APIs
-
-During development, APIs and routes can be defined here (check with Mr. Koh on final requirements).
-Call generate_meter_readings to get a dict of {meterId: List[MeterReading]}. For testing, the id is typicaly '999' which is baked into the buttons that trigger the APIs on the home page, you may change the id when calling generate_meter_readings. 
-"""
-import sys
 import os
-from flask import Flask, jsonify
-from meter_readings_generation import generate_meter_readings, MeterReading
-from utils import pretty_jsonify
+import re
+import random
+from typing import List
 import pandas as pd
+from flask import Flask, json, request, jsonify
+from Electricity_account import ElectricityAccount
 
+app = Flask(__name__)
+file_path = os.path.join(os.getcwd(), 'electricity_accounts.json')
 
-sys.path.append(os.getcwd())
+# Load all current meter accounts from file
+def load_electricity_accounts_from_file():
+    meters_list = []
 
+    # Check if the file exists; if it doesn't, create it with an empty list.
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as file:
+            json.dump([], file)
 
-# Define API
-app = Flask("__name__")
+    # Now safely load the JSON data
+    with open(file_path, "r") as file:
+        meters_list = json.load(file)
 
+    return meters_list
 
-# 1. main page
-# Add buttons here if you want to test a new API or route
-# Change the location.href to change the endpoint
-@app.route("/", methods = ["GET", "POST"])
+# Save a new meter to the file
+def save_electricity_accounts_to_file(electricity_account: ElectricityAccount):
+    # Build a set of meter IDs from the list of accounts (only once)
+    registered_meter_ids = {account.id for account in meters}
+
+    # Then, checking membership can be done as:
+    if electricity_account.meter_id in registered_meter_ids:
+        return False, "Meter ID already registered"
+
+    # Create the ElectricityAccount
+    meters.append(electricity_account)
+    accounts_dict = [account.to_dict() for account in meters]
+
+    with open(file_path, 'w') as f:
+        json.dump(accounts_dict, f, indent=4)
+    return True, "Meter registered successfully"
+
+# Validate meter ID format (XXX-XXX-XXX, digits only)
+def is_valid_meter_id(meter_id):
+    return bool(re.fullmatch(r"\d{3}-\d{3}-\d{3}", meter_id))
+
+# Global list of meters
+meters = load_electricity_accounts_from_file()
+
+# --- FRONTEND MAIN PAGE ---
+@app.route("/", methods=["GET"])
 def main():
-    jsonify({"message": "THIS API IS WORKING!"}), 200
     return '''
         <html>
+            <head>
+                <title>Electricity Meter Service</title>
+                <script>
+                    function registerMeter() {
+                        var meterId = document.getElementById("meterId").value.trim();
+
+                        if (!meterId) {
+                            document.getElementById("result").innerText = "Please enter a Meter ID.";
+                            return;
+                        }
+
+                        fetch('/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ meter_id: meterId })
+                        })
+                        .then(response => response.json().then(data => ({ status: response.status, body: data }))) 
+                        .then(response => {
+                            document.getElementById("result").innerText = response.body.message;
+                            document.getElementById("meterId").value = response.body.meter_id;
+                        })
+                        .catch(error => {
+                            document.getElementById("result").innerText = "Error registering meter. Please try again.";
+                        });
+                    }
+
+                    function generateReadings() {
+                        var meterId = document.getElementById("meterId").value;
+                        if (!meterId) {
+                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
+                            return;
+                        }
+                        fetch('/generate_readings/' + meterId)
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById("result").innerText = "Readings generated for Meter: " + meterId;
+                        })
+                        .catch(error => {
+                            document.getElementById("result").innerText = "Error generating readings.";
+                        });
+                    }
+
+                    function viewDailyUsage() {
+                        var meterId = document.getElementById("meterId").value;
+                        if (!meterId) {
+                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
+                            return;
+                        }
+                        window.location.href = "/meter/daily/" + meterId;
+                    }
+
+                    function viewMonthlyUsage() {
+                        var meterId = document.getElementById("meterId").value;
+                        if (!meterId) {
+                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
+                            return;
+                        }
+                        window.location.href = "/meter/monthly/" + meterId;
+                    }
+                </script>
+            </head>
             <body>
-                <h1>THIS API IS WORKING!</h1>
-                <p>These buttons call APIs for Meter Id 999 (testing purposes).</p>
-                <div style="display: flex; flex-direction: column; gap: 10px; width: 500px">
-                <button onclick="location.href='/meter/999'" type="button">get_meter method: /meter/999</button>
-                <button onclick="location.href='/meter/monthly/999'" type="button">get_monthly_meter_readings: /meter/monthly/999</button>
-                </div>
+                <h1>Electricity Meter Service</h1>
+                <label for="meterId">Enter Meter ID (format: XXX-XXX-XXX):</label>
+                <input type="text" id="meterId" name="meterId" placeholder="e.g., 123-456-789">
+                
+                <button onclick="registerMeter()">Register Meter</button>
+                <button onclick="generateReadings()">Generate Readings</button>
+                <button onclick="viewDailyUsage()">View Daily Usage</button>
+                <button onclick="viewMonthlyUsage()">View Monthly Usage</button>
+
+                <p id="result"></p>
             </body>
         </html>
     '''
 
+# --- BACKEND ROUTES ---
 
-# 2. Get all meter readings by meter ID
-@app.route('/meter/<id>', methods=['GET'])
-def get_meter(id):
-    meter_readings = generate_meter_readings(id) # keys = ['999']
-    if meter_readings:
-        return pretty_jsonify([meter.__dict__ for meter in meter_readings[id]]), 200
-    return pretty_jsonify({"error": f"Meter {id} not found"}), 404
+# expect input:
+# meter id
+# region
+# area
+# dwelling type
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    meter_id = data.get("meter_id")
+
+    if not meter_id:
+        return jsonify({"message": "Please enter a Meter ID"}), 400
+
+    if not is_valid_meter_id(meter_id):
+        return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), 400
+
+    if meter_id in meters:
+        return jsonify({
+            "meter_id": meter_id,
+            "message": "The Meter is already registered. You can view your data."
+        }), 200
+
+    # Register new meter
+    new_account = ElectricityAccount(meter_id=data.get("meter_id"), area=data.get("area"), region=data.get("region"), dwelling_type=data.get("dwelling_type"))
+
+    save_electricity_accounts_to_file(new_account)
+
+    return jsonify({"meter_id": meter_id, "message": "Meter Registered Successfully!"}), 201
+
+@app.route('/generate_readings/<meter_id>', methods=['GET'])
+def generate_readings(meter_id):
+    if meter_id not in meters:
+        return jsonify({"message": "Meter not found, please register first"}), 404
+
+    timestamps = pd.date_range(start=pd.Timestamp.now().date(), periods=48, freq="30min")
+    meter_readings = [round(random.uniform(0.1, 2.5), 2) for _ in range(len(timestamps))]
+    print(meter_readings)
+
+    readings = [{"timestamp": str(ts), "reading": reading} for ts, reading in zip(timestamps, meter_readings)]
+    return jsonify({"message": "Readings generated", "meter_id": meter_id, "readings": readings}), 200
 
 
-# Get monthly average by meter ID
-@app.route('/meter/monthly/<id>', methods=['GET'])
-def get_monthly_meter_readings(id):
-    meter_readings = generate_meter_readings(id) # keys = ['999']
-    if meter_readings:
-        df = MeterReading.to_dataframe(meter_readings[id])
-        # Should this be its own helper method? If its reusable in future, yes
-        monthly_avg = df.groupby(df['date'].dt.strftime('%Y-%m'))['meter_reading'].mean().round(2)
-        print(df.head())
-        return pretty_jsonify({'meter_reading': id, 'monthly_average': monthly_avg.to_dict() }), 200
-    return pretty_jsonify({"error": f"Meter {id} not found"}), 404
+@app.route('/meter/daily/<meter_id>', methods=['GET'])
+def get_daily_meter_readings(meter_id):
+    if meter_id not in meters:
+        return jsonify({"message": f"Meter {meter_id} not found"}), 404
+
+    daily_usage = round(random.uniform(10, 50), 2)  
+    # Simulating monthly usage, we need to change 
+    return jsonify({'meter_id': meter_id, 'daily_usage': daily_usage}), 200
 
 
+@app.route('/meter/monthly/<meter_id>', methods=['GET'])
+def get_monthly_meter_readings(meter_id):
+    if meter_id not in meters:
+        return jsonify({"message": f"Meter {meter_id} not found"}), 404
+
+    monthly_usage = round(random.uniform(300, 1500), 2)  
+    # Simulating monthly usage, we need to change 
+    return jsonify({'meter_id': meter_id, 'monthly_usage': monthly_usage}), 200
+
+# Run the Flask app
 if __name__ == "__main__":
     app.run(debug=True)
