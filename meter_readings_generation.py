@@ -3,7 +3,6 @@ import random
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-
 # Define the MeterReading class
 class MeterReading():
     def __init__(self, ID, date, time, meter_reading):
