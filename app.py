@@ -7,6 +7,7 @@ from flask import Flask, json, request, jsonify
 from http import HTTPStatus
 import json
 from models.electricity_account import ElectricityAccount
+from models.meter_reading import MeterReading
 from utils import save_to_daily_csv
 
 app = Flask(__name__)
@@ -51,6 +52,7 @@ def is_valid_meter_id(meter_id):
 
 # Global list of meters
 meters = load_electricity_accounts_from_file()
+meter_readings = {}
 
 # --- FRONTEND MAIN PAGE ---
 @app.route("/", methods=["GET"])
@@ -187,36 +189,35 @@ async def meter_reading():
         time = request.form.get('time')
         electricity_reading = request.form.get('electricity_reading')
 
-        # Basic validation
-        if not all([meter_id, date, time, electricity_reading]):
-            return {"error": "All fields are required"}, HTTPStatus.BAD_REQUEST
-
         # Check if meter exists
         existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
-        if existing_meter == None:
+        if existing_meter is None:
             return {"error": "Meter does not exist!"}, HTTPStatus.FORBIDDEN
 
-        # Validate date format (DD-MM-YYYY)
         try:
-            datetime.strptime(date, '%d-%m-%Y')
-        except ValueError:
-            return {"error": "Invalid date format. Use DD-MM-YYYY"}, HTTPStatus.BAD_REQUEST
-
-        # Validate time format (HH:MM:SS)
-        try:
-            datetime.strptime(time, '%H:%M:%S')
-        except ValueError:
-            return {"error": "Invalid time format. Use HH:MM:SS"}, HTTPStatus.BAD_REQUEST
-
-        # Validate electricity reading is a number
-        try:
-            float(electricity_reading)
-        except ValueError:
-            return {"error": "Electricity reading must be a number"}, HTTPStatus.BAD_REQUEST
+            reading = MeterReading.validate_and_create(
+                meter_id=meter_id,
+                date=date,
+                time=time,
+                electricity_reading=electricity_reading
+            )
+        except ValueError as e:
+            return {"error": str(e)}, HTTPStatus.BAD_REQUEST
 
         # Save to CSV if all validations pass
-        await save_to_daily_csv([meter_id, date, time, electricity_reading])
-        return {"message": "Reading saved successfully"}, HTTPStatus.ACCEPTED
+        await save_to_daily_csv([reading.meter_id, reading.date, reading.time, reading.electricity_reading])
+
+        # in-memory dict of MeterReading objects
+        if reading.meter_id in meter_readings:
+            meter_readings[reading.meter_id].append(reading)
+        else:
+            meter_readings[reading.meter_id] = [reading]
+
+        # Return success response with the reading data
+        return {
+            "message": "Reading saved successfully",
+            "data": reading.to_dict()
+        }, HTTPStatus.ACCEPTED
 
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR

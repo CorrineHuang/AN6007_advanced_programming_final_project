@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 class MeterReading:
     def __init__(self, meter_id, date, time, electricity_reading):
@@ -33,3 +33,36 @@ class MeterReading:
             time=data.get('time'),
             electricity_reading=data.get('electricity_reading')
         )
+
+    @classmethod
+    def validate_and_create(cls, meter_id, date, time, electricity_reading):
+        """Validate and create a new MeterReading instance"""
+        try:
+            # Basic validation
+            if not all([meter_id, date, time, electricity_reading]):
+                raise ValueError("All fields are required")
+
+            # Validate date format
+            try:
+                datetime.strptime(date, '%d-%m-%Y')
+            except:
+                raise ValueError('Invalid date format. Use DD-MM-YYYY')
+
+            # Validate time format
+            try:
+                datetime.strptime(time, '%H:%M:%S')
+            except:
+                raise ValueError('Invalid time format. Use HH:MM:SS')
+
+            # Validate electricity reading
+            electricity_reading = float(electricity_reading)
+            if electricity_reading < 0:
+                raise ValueError("Electricity reading must be positive")
+
+            # Create instance if all validations pass
+            reading = cls(meter_id, date, time, electricity_reading)
+
+            return reading
+
+        except ValueError as e:
+            raise ValueError(f"Validation failed: {str(e)}")
