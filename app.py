@@ -119,7 +119,7 @@ def main():
                 <h1>Electricity Meter Service</h1>
                 <label for="meterId">Enter Meter ID (format: XXX-XXX-XXX):</label>
                 <input type="text" id="meterId" name="meterId" placeholder="e.g., 123-456-789">
-                
+
                 <button onclick="registerMeter()">Register Meter</button>
                 <button onclick="generateReadings()">Generate Readings</button>
                 <button onclick="viewDailyUsage()">View Daily Usage</button>
@@ -143,7 +143,7 @@ def register():
     meter_id = data.get("meter_id")
 
     if not meter_id:
-        return jsonify({"message": "Please enter a Meter ID"}), 400
+        return jsonify({"message": "Please provide a meter Id, in the format XXX-XXX-XXX (digits only)"}), 400
 
     if not is_valid_meter_id(meter_id):
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), 400
@@ -153,8 +153,8 @@ def register():
     if existing_meter:
         return jsonify({
             "meter_id": meter_id,
-            "message": "The Meter is already registered. You can view your data."
-        }), 200
+            "message": "This meter is already registered."
+        }), 409
 
     # Create and save new account
     new_account = ElectricityAccount(
