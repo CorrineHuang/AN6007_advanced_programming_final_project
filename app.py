@@ -6,9 +6,10 @@ import pandas as pd
 from flask import Flask, json, request, jsonify
 from http import HTTPStatus
 import json
+import csv
 from models.electricity_account import ElectricityAccount
 from models.meter_reading import MeterReading
-from utils import save_to_daily_csv
+from utils import save_to_half_hourly_csv
 
 app = Flask(__name__)
 file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
@@ -205,7 +206,7 @@ async def meter_reading():
             return {"error": str(e)}, HTTPStatus.BAD_REQUEST
 
         # Save to CSV if all validations pass
-        await save_to_daily_csv([reading.meter_id, reading.date, reading.time, reading.electricity_reading])
+        await save_to_half_hourly_csv([reading.meter_id, reading.date, reading.time, reading.electricity_reading])
 
         # in-memory dict of MeterReading objects
         if reading.meter_id in meter_readings:
@@ -236,23 +237,15 @@ def generate_readings(meter_id):
 
 
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
-def get_daily_meter_readings(meter_id):
+def get_daily_meter_usage(meter_id):
     if meter_id not in meters:
         return jsonify({"message": f"Meter {meter_id} not found"}), 404
 
-    daily_usage = round(random.uniform(10, 50), 2)  
-    # Simulating monthly usage, we need to change 
-    return jsonify({'meter_id': meter_id, 'daily_usage': daily_usage}), 200
-
-
-@app.route('/meter/monthly/<meter_id>', methods=['GET'])
-def get_monthly_meter_readings(meter_id):
-    if meter_id not in meters:
-        return jsonify({"message": f"Meter {meter_id} not found"}), 404
-
-    monthly_usage = round(random.uniform(300, 1500), 2)  
-    # Simulating monthly usage, we need to change 
-    return jsonify({'meter_id': meter_id, 'monthly_usage': monthly_usage}), 200
+    # Load and print daily_usage.csv
+    with open('archived_data\daily_usage.csv', 'r', newline='') as file:
+        reader = csv.reader(file)
+        data = [f"{row[0].ljust(15)} {row[1].ljust(15)} {row[2].ljust(15)} {row[3].ljust(15)}" for row in reader]
+    return data, 200
 
 # Run the Flask app
 if __name__ == "__main__":

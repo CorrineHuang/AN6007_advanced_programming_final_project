@@ -1,20 +1,20 @@
 import os
 import csv
 
-daily_csv_filepath = 'archived_data\daily.csv'
+half_hourly_readings_csv_filepath = 'archived_data\half_hourly_readings.csv'
 
-async def save_to_daily_csv(data):
-    file_exists = os.path.exists(daily_csv_filepath)
+async def save_to_half_hourly_csv(data):
+    file_exists = os.path.exists(half_hourly_readings_csv_filepath)
 
     # If file doesn't exist, create it with headers
     if not file_exists:
-        with open(daily_csv_filepath, 'w', newline='') as file:
+        with open(half_hourly_readings_csv_filepath, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Meter Id', 'Date', 'Time', 'Electricity Reading (kWh)'])
 
     # Append the new data
     try:
-        with open(daily_csv_filepath, 'a', newline='') as file:
+        with open(half_hourly_readings_csv_filepath, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(data)
             print(f"Successfully appended: {data}")
