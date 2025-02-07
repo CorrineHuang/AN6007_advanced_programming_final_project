@@ -265,7 +265,7 @@ def get_daily_meter_usage(meter_id):
     except FileNotFoundError:
         return jsonify({"message": "Daily usage file not found"}), 404
     except Exception as e:
-        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
 
 @app.route("/stop_server", methods=["POST"])

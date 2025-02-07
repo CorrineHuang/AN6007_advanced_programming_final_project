@@ -32,11 +32,12 @@ async def save_to_half_hourly_csv(data):
 def calculate_daily_usage(meters, meter_readings):
     """Calculate daily electricity usage and save to CSV."""
     daily_usage_data = []
+
     for meter_id, readings in meter_readings.items():
         account = next((meter for meter in meters if meter.meter_id == meter_id), None)
 
         daily_usage = readings[-1].electricity_reading - readings[0].electricity_reading
-        daily_usage_data.append([meter_id, readings[0].date, account.region, account.area, daily_usage])
+        daily_usage_data.append([meter_id, account.region, account.area, readings[0].date, readings[0].time, daily_usage])
 
     daily_exists = os.path.exists(daily_file)
     if not daily_exists:
@@ -54,45 +55,42 @@ def calculate_daily_usage(meters, meter_readings):
         raise
 
 
-def calculate_monthly_usage(meters, meter_readings):
+def calculate_monthly_usage(meter_readings):
     """Calculate monthly electricity usage and save to CSV."""
-    monthly_usage_data = []
-
     df = pd.read_csv(daily_file)
-    df['Date'] = pd.to_datetime(df['Date']).strftime("%m-%Y")
-    current_month = datetime.now(pytz.timezone("Asia/Singapore")).strftime("%m-%Y")
+    df['Date'] = pd.to_datetime(df['Date']).strftime("%b-%Y")
+    current_month = datetime.now(pytz.timezone("Asia/Singapore")).strftime("%b-%Y")
 
-    for meter_id, readings in meter_readings.items():
-        monthly_usage = df[]
+    if os.path.exists(monthly_file):
+        monthly_df = pd.read_csv(monthly_file)
+    else:
+        monthly_df = pd.DataFrame(columns = ["Meter_id", "Region", "Area", "Month", "Monthly_Usage (kWh)"])
 
-        
+    monthly_df["Month"] = monthly_df["Month"].astype(str)
+
+    for meter_id in meter_readings:
+        df_month = df[(df["Meter_id"] == meter_id) & (df["Date"] == current_month)]
         if df_month.empty:
-            return
+            continue
+        
+        monthly_usage = df_month["Daily_Usage (kWh)"].max() - df_month["Daily_Usage (kWh)"].min()
+        
+        # Check if this meter_id already has an entry for the current month
+        existing_idx = monthly_df[(monthly_df["Meter_id"] == meter_id) & (monthly_df["Month"] == current_month)].index
 
+        if not existing_idx.empty:
+            # Update existing record
+            monthly_df.loc[existing_idx, "Monthly_Usage (kWh)"] = monthly_usage
+        else:
+            # Append new record
+            monthly_df = pd.concat([monthly_df, pd.DataFrame([{
+                "Meter_id": meter_id,
+                "Region": df_month.iloc[0]["Region"],
+                "Area": df_month.iloc[0]["Area"],
+                "Month": current_month,
+                "Monthly_Usage (kWh)": monthly_usage
+            }])], ignore_index=True)
 
-
-
-
-
-    
-
-    for meter_id, readings in meter_readings.items():
-        account = next((meter for meter in meters if meter.meter_id == meter_id), None)
-
-        monthly_usage = readings[-1].electricity_reading - readings[0].electricity_reading
-        monthly_usage_data.append([meter_id, readings[0].date, account.region, account.area, monthly_usage])
-
-    monthly_exists = os.path.exists(monthly_file)
-    if not monthly_exists:
-        with open(monthly_file, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Meter_id", "Region", "Area", "Month", "monthly_Usage (kWh)"])
-
-    try:
-        with open(monthly_file, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(monthly_usage_data)
-            print(f"Successfully appended: {monthly_usage_data}")
-    except IOError as e:
-        print(f"Error writing to file: {e}")
-        raise
+    # Save updated monthly usage data
+    monthly_df.to_csv(monthly_file, index=False)
+    print("Monthly usage data updated successfully.")
