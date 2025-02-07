@@ -9,7 +9,7 @@ import json
 import csv
 from models.electricity_account import ElectricityAccount
 from models.meter_reading import MeterReading
-from utils import save_to_half_hourly_csv
+from utils import save_to_half_hourly_csv, calculate_daily_usage, calculate_monthly_usage
 
 app = Flask(__name__)
 file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
@@ -241,11 +241,43 @@ def get_daily_meter_usage(meter_id):
     if meter_id not in meters:
         return jsonify({"message": f"Meter {meter_id} not found"}), 404
 
-    # Load and print daily_usage.csv
-    with open('archived_data\daily_usage.csv', 'r', newline='') as file:
-        reader = csv.reader(file)
-        data = [f"{row[0].ljust(15)} {row[1].ljust(15)} {row[2].ljust(15)} {row[3].ljust(15)}" for row in reader]
-    return data, 200
+    try:
+        with open('archived_data/daily_usage.csv', 'r', newline='') as file:
+            reader = csv.reader(file)
+            header = next(reader)  
+            last_reading = None
+
+            for row in reader:
+                if row[0] == meter_id:
+                    last_reading = row
+
+            if last_reading:
+                return jsonify({
+                    "meter_id": last_reading[0],
+                    "region":last_reading[1],
+                    "area": last_reading[2],
+                    "date": last_reading[3],
+                    "time": last_reading[4],
+                    "usage": last_reading[5]
+                }), 200
+            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
+
+    except FileNotFoundError:
+        return jsonify({"message": "Daily usage file not found"}), 404
+    except Exception as e:
+        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+
+
+@app.route("/stop_server", methods=["POST"])
+def stop_server():
+    global acceptAPI
+
+    acceptAPI = False
+    calculate_daily_usage(meters, meter_readings)
+    calculate_monthly_usage(meters, meter_readings)
+    acceptAPI = True
+
+    return jsonify({"message": "Server is shutting down."}), 200
 
 # Run the Flask app
 if __name__ == "__main__":
