@@ -1,10 +1,3 @@
-from datetime import datetime, timedelta
-from typing import List
-import pandas as pd
-import random
-from zoneinfo import ZoneInfo
-import csv 
-
 class ElectricityAccount:
     def __init__(self, meter_id, area, region, dwelling_type):
         self.meter_id = meter_id
@@ -14,7 +7,7 @@ class ElectricityAccount:
 
     def __str__(self):
         return (
-            f"ID: {self.meter_id}\n"
+            f"Meter Id: {self.meter_id}\n"
             f"Area: {self.area}\n"
             f"Region: {self.region}\n"
             f"Dwelling Type: {self.dwelling_type}\n"

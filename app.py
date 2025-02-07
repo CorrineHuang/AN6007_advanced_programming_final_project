@@ -1,13 +1,17 @@
+from datetime import datetime
 import os
 import re
 import random
 import pandas as pd
 from flask import Flask, json, request, jsonify
+from http import HTTPStatus
 import json
-from Electricity_account import ElectricityAccount
+from models.electricity_account import ElectricityAccount
+from models.meter_reading import MeterReading
+from utils import save_to_daily_csv
 
 app = Flask(__name__)
-file_path = os.path.join(os.getcwd(), 'electricity_accounts.json')
+file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 
 def load_electricity_accounts_from_file():
     """Load all meter accounts from file"""
@@ -48,6 +52,7 @@ def is_valid_meter_id(meter_id):
 
 # Global list of meters
 meters = load_electricity_accounts_from_file()
+meter_readings = {}
 
 # --- FRONTEND MAIN PAGE ---
 @app.route("/", methods=["GET"])
@@ -119,7 +124,7 @@ def main():
                 <h1>Electricity Meter Service</h1>
                 <label for="meterId">Enter Meter ID (format: XXX-XXX-XXX):</label>
                 <input type="text" id="meterId" name="meterId" placeholder="e.g., 123-456-789">
-                
+
                 <button onclick="registerMeter()">Register Meter</button>
                 <button onclick="generateReadings()">Generate Readings</button>
                 <button onclick="viewDailyUsage()">View Daily Usage</button>
@@ -143,7 +148,7 @@ def register():
     meter_id = data.get("meter_id")
 
     if not meter_id:
-        return jsonify({"message": "Please enter a Meter ID"}), 400
+        return jsonify({"message": "Please provide a meter Id, in the format XXX-XXX-XXX (digits only)"}), HTTPStatus.BAD_REQUEST
 
     if not is_valid_meter_id(meter_id):
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), 400
@@ -153,8 +158,8 @@ def register():
     if existing_meter:
         return jsonify({
             "meter_id": meter_id,
-            "message": "The Meter is already registered. You can view your data."
-        }), 200
+            "message": "This meter is already registered."
+        }), HTTPStatus.CONFLICT
 
     # Create and save new account
     new_account = ElectricityAccount(
@@ -167,12 +172,55 @@ def register():
     success, message = save_electricity_accounts_to_file(new_account)
 
     if not success:
-        return jsonify({"message": message}), 400
+        return jsonify({"message": message}), HTTPStatus.BAD_REQUEST
 
     return jsonify({
         "meter_id": meter_id,
         "message": "Meter Registered Successfully!"
-    }), 201
+    }), HTTPStatus.CREATED
+
+
+@app.route('/meter-reading', methods=['POST'])
+async def meter_reading():
+    try:
+        # Get form data
+        meter_id = request.form.get('meter_id')
+        date = request.form.get('date')
+        time = request.form.get('time')
+        electricity_reading = request.form.get('electricity_reading')
+
+        # Check if meter exists
+        existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
+        if existing_meter is None:
+            return {"error": "Meter does not exist!"}, HTTPStatus.FORBIDDEN
+
+        try:
+            reading = MeterReading.validate_and_create(
+                meter_id=meter_id,
+                date=date,
+                time=time,
+                electricity_reading=electricity_reading
+            )
+        except ValueError as e:
+            return {"error": str(e)}, HTTPStatus.BAD_REQUEST
+
+        # Save to CSV if all validations pass
+        await save_to_daily_csv([reading.meter_id, reading.date, reading.time, reading.electricity_reading])
+
+        # in-memory dict of MeterReading objects
+        if reading.meter_id in meter_readings:
+            meter_readings[reading.meter_id].append(reading)
+        else:
+            meter_readings[reading.meter_id] = [reading]
+
+        # Return success response with the reading data
+        return {
+            "message": "Reading saved successfully",
+            "data": reading.to_dict()
+        }, HTTPStatus.ACCEPTED
+
+    except Exception as e:
+        return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
 @app.route('/generate_readings/<meter_id>', methods=['GET'])
 def generate_readings(meter_id):
