@@ -1,18 +1,23 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 22 22:16:42 2025
+import os
+import csv
 
-@author: chunhan
-"""
-import pandas as pd
-from flask import jsonify
-import json
+daily_csv_filepath = 'archived_data\daily.csv'
 
-df=pd.read_csv("final.csv")
+async def save_to_daily_csv(data):
+    file_exists = os.path.exists(daily_csv_filepath)
 
-def pretty_jsonify(*args, **kwargs):
-    response = jsonify(*args, **kwargs)
-    response.data = json.dumps(json.loads(response.data), indent=4)  # Pretty print JSON
-    response.mimetype = 'application/json'
-    return response
+    # If file doesn't exist, create it with headers
+    if not file_exists:
+        with open(daily_csv_filepath, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Meter Id', 'Date', 'Time', 'Electricity Reading (kWh)'])
+
+    # Append the new data
+    try:
+        with open(daily_csv_filepath, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(data)
+            print(f"Successfully appended: {data}")
+    except IOError as e:
+        print(f"Error writing to file: {e}")
+        raise
