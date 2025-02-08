@@ -89,8 +89,8 @@ def calculate_monthly_usage(meter_readings):
                 "Area": df_month.iloc[0]["Area"],
                 "Month": current_month,
                 "Monthly_Usage (kWh)": monthly_usage
-            }])], ignore_index=True)
+            }])], ignore_index = True)
 
     # Save updated monthly usage data
-    monthly_df.to_csv(monthly_file, index=False)
+    monthly_df.to_csv(monthly_file, index = False)
     print("Monthly usage data updated successfully.")
