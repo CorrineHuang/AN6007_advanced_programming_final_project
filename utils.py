@@ -37,13 +37,13 @@ def calculate_daily_usage(meters, meter_readings):
         account = next((meter for meter in meters if meter.meter_id == meter_id), None)
 
         daily_usage = readings[-1].electricity_reading - readings[0].electricity_reading
-        daily_usage_data.append([meter_id, account.region, account.area, readings[0].date, readings[0].time, daily_usage])
+        daily_usage_data.append([meter_id, account.region, account.area, readings[0].date, daily_usage])
 
     daily_exists = os.path.exists(daily_file)
     if not daily_exists:
         with open(daily_file, 'w', newline = '') as file:
             writer = csv.writer(file)
-            writer.writerow(["Meter_id", "Region", "Area", "Date", "Time", "Daily_Usage (kWh)"])
+            writer.writerow(["Meter_id", "Region", "Area", "Date", "Daily_Usage (kWh)"])
 
     try:
         with open(daily_file, 'a', newline = '') as file:
@@ -55,10 +55,10 @@ def calculate_daily_usage(meters, meter_readings):
         raise
 
 
-def calculate_monthly_usage(meter_readings):
+def calculate_monthly_usage():
     """Calculate monthly electricity usage and save to CSV."""
     df = pd.read_csv(daily_file)
-    df['Date'] = pd.to_datetime(df['Date']).strftime("%b-%Y")
+    df['Date'] = pd.to_datetime(df['Date']).dt.strftime("%b-%Y")
     current_month = datetime.now(pytz.timezone("Asia/Singapore")).strftime("%b-%Y")
 
     if os.path.exists(monthly_file):
@@ -68,12 +68,14 @@ def calculate_monthly_usage(meter_readings):
 
     monthly_df["Month"] = monthly_df["Month"].astype(str)
 
-    for meter_id in meter_readings:
-        df_month = df[(df["Meter_id"] == meter_id) & (df["Date"] == current_month)]
-        if df_month.empty:
-            continue
-        
-        monthly_usage = df_month["Daily_Usage (kWh)"].max() - df_month["Daily_Usage (kWh)"].min()
+    df_month = df[df["Date"] == current_month]
+    if df_month.empty:
+        print(f"No data found for {current_month}.")
+        return
+
+    for meter_id in df_month.Meter_id.unique():
+        df_month_id = df_month[df_month["Meter_id"] == meter_id]
+        monthly_usage = df_month["Daily_Usage (kWh)"].sum()
         
         # Check if this meter_id already has an entry for the current month
         existing_idx = monthly_df[(monthly_df["Meter_id"] == meter_id) & (monthly_df["Month"] == current_month)].index
@@ -85,8 +87,8 @@ def calculate_monthly_usage(meter_readings):
             # Append new record
             monthly_df = pd.concat([monthly_df, pd.DataFrame([{
                 "Meter_id": meter_id,
-                "Region": df_month.iloc[0]["Region"],
-                "Area": df_month.iloc[0]["Area"],
+                "Region": df_month_id.iloc[0]["Region"],
+                "Area": df_month_id.iloc[0]["Area"],
                 "Month": current_month,
                 "Monthly_Usage (kWh)": monthly_usage
             }])], ignore_index = True)

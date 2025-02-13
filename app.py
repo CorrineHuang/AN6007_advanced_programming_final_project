@@ -7,6 +7,7 @@ from flask import Flask, json, request, jsonify
 from http import HTTPStatus
 import json
 import csv
+import ast
 from models.electricity_account import ElectricityAccount
 from models.meter_reading import MeterReading
 from utils import save_to_half_hourly_csv, calculate_daily_usage, calculate_monthly_usage
@@ -226,8 +227,6 @@ async def meter_reading():
 
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
 def get_daily_meter_usage(meter_id):
-    if meter_id not in meters:
-        return jsonify({"message": f"Meter {meter_id} not found"}), 404
 
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
@@ -236,8 +235,15 @@ def get_daily_meter_usage(meter_id):
             last_reading = None
 
             for row in reader:
-                if row[0] == meter_id:
-                    last_reading = row
+                try:
+                    parsed_row = ast.literal_eval(row[0])
+                except (ValueError, SyntaxError):
+                    continue
+                if parsed_row[0] == meter_id:
+                    last_reading = parsed_row
+
+                # if row[0] == meter_id:
+                #     last_reading = row
 
             if last_reading:
                 return jsonify({
@@ -245,8 +251,7 @@ def get_daily_meter_usage(meter_id):
                     "region":last_reading[1],
                     "area": last_reading[2],
                     "date": last_reading[3],
-                    "time": last_reading[4],
-                    "usage": last_reading[5]
+                    "usage": last_reading[4]
                 }), 200
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
 
@@ -255,6 +260,37 @@ def get_daily_meter_usage(meter_id):
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
+@app.route('/meter/monthly/<meter_id>', methods=['GET'])
+def get_monthly_meter_usage(meter_id):
+
+    try:
+        with open('archived_data/monthly_usage.csv', 'r', newline='') as file:
+            reader = csv.reader(file)
+            header = next(reader)  
+            last_reading = None
+
+            for row in reader:
+                try:
+                    parsed_row = ast.literal_eval(row[0])
+                except (ValueError, SyntaxError):
+                    continue
+                if parsed_row[0] == meter_id:
+                    last_reading = parsed_row
+
+            if last_reading:
+                return jsonify({
+                    "meter_id": last_reading[0],
+                    "region":last_reading[1],
+                    "area": last_reading[2],
+                    "date": last_reading[3],
+                    "usage": last_reading[4]
+                }), 200
+            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
+
+    except FileNotFoundError:
+        return jsonify({"message": "Monthly usage file not found"}), 404
+    except Exception as e:
+        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
 @app.route("/stop_server", methods=["POST"])
 def stop_server():
@@ -262,7 +298,8 @@ def stop_server():
 
     acceptAPI = False
     calculate_daily_usage(meters, meter_readings)
-    calculate_monthly_usage(meters, meter_readings)
+    calculate_monthly_usage()
+    meter_readings.clear()
     acceptAPI = True
 
     return jsonify({"message": "Server is shutting down."}), 200
