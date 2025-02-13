@@ -62,6 +62,7 @@ def main():
         <html>
             <head>
                 <title>Electricity Meter Service</title>
+                <p>This is out of date. Some buttons may not work
                 <script>
                     function registerMeter() {
                         var meterId = document.getElementById("meterId").value.trim();
@@ -223,19 +224,6 @@ async def meter_reading():
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
-@app.route('/generate_readings/<meter_id>', methods=['GET'])
-def generate_readings(meter_id):
-    if meter_id not in meters:
-        return jsonify({"message": "Meter not found, please register first"}), 404
-
-    timestamps = pd.date_range(start=pd.Timestamp.now().date(), periods=48, freq="30min")
-    meter_readings = [round(random.uniform(0.1, 2.5), 2) for _ in range(len(timestamps))]
-    print(meter_readings)
-
-    readings = [{"timestamp": str(ts), "reading": reading} for ts, reading in zip(timestamps, meter_readings)]
-    return jsonify({"message": "Readings generated", "meter_id": meter_id, "readings": readings}), 200
-
-
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
 def get_daily_meter_usage(meter_id):
     if meter_id not in meters:
@@ -278,6 +266,21 @@ def stop_server():
     acceptAPI = True
 
     return jsonify({"message": "Server is shutting down."}), 200
+
+
+# This randomly generates meter readings - WE DO NOT WANT THIS ANYMORE
+# @app.route('/generate_readings/<meter_id>', methods=['GET'])
+# def generate_readings(meter_id):
+#     if meter_id not in meters:
+#         return jsonify({"message": "Meter not found, please register first"}), 404
+
+#     timestamps = pd.date_range(start=pd.Timestamp.now().date(), periods=48, freq="30min")
+#     meter_readings = [round(random.uniform(0.1, 2.5), 2) for _ in range(len(timestamps))]
+#     print(meter_readings)
+
+#     readings = [{"timestamp": str(ts), "reading": reading} for ts, reading in zip(timestamps, meter_readings)]
+#     return jsonify({"message": "Readings generated", "meter_id": meter_id, "readings": readings}), 200
+
 
 # Run the Flask app
 if __name__ == "__main__":
