@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz
 
 
-half_hourly_readings_csv_filepath = 'archived_data\half_hourly_readings.csv'
+half_hourly_readings_csv_filepath = 'archived_data/half_hourly_readings.csv'
 daily_file = "archived_data/daily_usage.csv"
 monthly_file = "archived_data/monthly_usage.csv"
 
