@@ -153,7 +153,7 @@ def register():
         return jsonify({"message": "Please provide a meter Id, in the format XXX-XXX-XXX (digits only)"}), HTTPStatus.BAD_REQUEST
 
     if not is_valid_meter_id(meter_id):
-        return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), 400
+        return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), HTTPStatus.BAD_REQUEST
 
     # Check if meter exists
     existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
@@ -163,12 +163,20 @@ def register():
             "message": "This meter is already registered."
         }), HTTPStatus.CONFLICT
 
+    # Check for missing fields: area, region, or dwelling type
+    area = data.get("area")
+    region = data.get("region")
+    dwelling_type = data.get("dwelling_type")
+
+    if not area or not region or not dwelling_type:
+        return jsonify({"message": "Please provide a meter Id, area, region, and dwelling type."}), HTTPStatus.BAD_REQUEST
+
     # Create and save new account
     new_account = ElectricityAccount(
         meter_id=meter_id,
-        area=data.get("area"),
-        region=data.get("region"),
-        dwelling_type=data.get("dwelling_type")
+        area=area,
+        region=region,
+        dwelling_type=dwelling_type
     )
 
     success, message = save_electricity_accounts_to_file(new_account)
