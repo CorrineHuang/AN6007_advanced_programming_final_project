@@ -225,8 +225,8 @@ async def meter_reading():
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
-@app.route('/meter/daily/<meter_id>', methods=['GET'])
-def get_daily_meter_usage(meter_id):
+@app.route('/meter/<meter_id>/daily/latest', methods=['GET'])
+def get_latest_daily_meter_usage(meter_id):
 
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
@@ -235,15 +235,8 @@ def get_daily_meter_usage(meter_id):
             last_reading = None
 
             for row in reader:
-                try:
-                    parsed_row = ast.literal_eval(row[0])
-                except (ValueError, SyntaxError):
-                    continue
-                if parsed_row[0] == meter_id:
-                    last_reading = parsed_row
-
-                # if row[0] == meter_id:
-                #     last_reading = row
+                if row[0] == meter_id:
+                    last_reading = row
 
             if last_reading:
                 return jsonify({
@@ -260,8 +253,39 @@ def get_daily_meter_usage(meter_id):
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
-@app.route('/meter/monthly/<meter_id>', methods=['GET'])
-def get_monthly_meter_usage(meter_id):
+@app.route('/meter/<meter_id>/daily', methods=['GET'])
+def get_daily_readings(meter_id):
+    try:
+        with open('archived_data/daily_usage.csv', 'r', newline='') as file:
+            reader = csv.reader(file)
+            header = next(reader)  # Skip header row
+            readings = []
+
+            for row in reader:
+                # If using standard CSV format (not stringified lists)
+                if row[0] == meter_id:
+                    readings.append({
+                        "meter_id": row[0],
+                        "region": row[1],
+                        "area": row[2],
+                        "date": row[3],
+                        "usage": float(row[4])
+                    })
+
+            if readings:
+                return jsonify({
+                    "meter_id": meter_id,
+                    "readings": readings
+                }), 200
+            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
+
+    except FileNotFoundError:
+        return jsonify({"message": "Daily usage file not found"}), 404
+    except Exception as e:
+        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+
+@app.route('/meter/<meter_id>/monthly/latest', methods=['GET'])
+def get_latest_monthly_meter_usage(meter_id):
 
     try:
         with open('archived_data/monthly_usage.csv', 'r', newline='') as file:
@@ -270,12 +294,8 @@ def get_monthly_meter_usage(meter_id):
             last_reading = None
 
             for row in reader:
-                try:
-                    parsed_row = ast.literal_eval(row[0])
-                except (ValueError, SyntaxError):
-                    continue
-                if parsed_row[0] == meter_id:
-                    last_reading = parsed_row
+                if row[0] == meter_id:
+                    last_reading = row
 
             if last_reading:
                 return jsonify({
@@ -284,6 +304,36 @@ def get_monthly_meter_usage(meter_id):
                     "area": last_reading[2],
                     "date": last_reading[3],
                     "usage": last_reading[4]
+                }), 200
+            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
+
+    except FileNotFoundError:
+        return jsonify({"message": "Monthly usage file not found"}), 404
+    except Exception as e:
+        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+    
+@app.route('/meter/<meter_id>/monthly', methods=['GET'])
+def get_monthly_readings(meter_id):
+    try:
+        with open('archived_data/monthly_usage.csv', 'r', newline='') as file:
+            reader = csv.reader(file)
+            header = next(reader) 
+            readings = []
+
+            for row in reader:
+                if row[0] == meter_id:
+                    readings.append({
+                        "meter_id": row[0],
+                        "region": row[1],
+                        "area": row[2],
+                        "date": row[3],
+                        "usage": float(row[4])
+                    })
+
+            if readings:
+                return jsonify({
+                    "meter_id": meter_id,
+                    "readings": readings
                 }), 200
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
 
