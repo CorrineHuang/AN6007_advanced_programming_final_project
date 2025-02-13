@@ -225,7 +225,7 @@ async def meter_reading():
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
-@app.route('/meter/<meter_id>/daily/latest', methods=['GET'])
+@app.route('/meters/<meter_id>/daily/latest', methods=['GET'])
 def get_latest_daily_meter_usage(meter_id):
 
     try:
@@ -253,7 +253,7 @@ def get_latest_daily_meter_usage(meter_id):
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
-@app.route('/meter/<meter_id>/daily', methods=['GET'])
+@app.route('/meters/<meter_id>/daily', methods=['GET'])
 def get_daily_readings(meter_id):
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
@@ -284,7 +284,7 @@ def get_daily_readings(meter_id):
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
-@app.route('/meter/<meter_id>/monthly/latest', methods=['GET'])
+@app.route('/meters/<meter_id>/monthly/latest', methods=['GET'])
 def get_latest_monthly_meter_usage(meter_id):
 
     try:
@@ -312,7 +312,7 @@ def get_latest_monthly_meter_usage(meter_id):
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
     
-@app.route('/meter/<meter_id>/monthly', methods=['GET'])
+@app.route('/meters/<meter_id>/monthly', methods=['GET'])
 def get_monthly_readings(meter_id):
     try:
         with open('archived_data/monthly_usage.csv', 'r', newline='') as file:
