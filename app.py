@@ -14,6 +14,7 @@ from utils import save_to_half_hourly_csv, calculate_daily_usage, calculate_mont
 app = Flask(__name__)
 file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 
+# Load existing accounts
 def load_electricity_accounts_from_file():
     """Load all meter accounts from file"""
     if not os.path.exists(file_path):
@@ -138,7 +139,7 @@ def main():
     '''
 
 # --- BACKEND ROUTES ---
-
+# API 1: Register
 # expect input:
 # meter id
 # region
@@ -155,7 +156,7 @@ def register():
     if not is_valid_meter_id(meter_id):
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), HTTPStatus.BAD_REQUEST
 
-    # Check if meter exists
+    # Check if meter alreaday exists
     existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
     if existing_meter:
         return jsonify({
@@ -189,7 +190,7 @@ def register():
         "message": "Meter Registered Successfully!"
     }), HTTPStatus.CREATED
 
-
+# API 2: Get meter reading data from IoT meters
 @app.route('/meter-reading', methods=['POST'])
 async def meter_reading():
     try:
@@ -202,7 +203,7 @@ async def meter_reading():
         # Check if meter exists
         existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
         if existing_meter is None:
-            return {"error": "Meter does not exist!"}, HTTPStatus.FORBIDDEN
+            return {"error": "Meter does not exist! Please register first."}, HTTPStatus.FORBIDDEN
 
         try:
             reading = MeterReading.validate_and_create(
@@ -231,7 +232,7 @@ async def meter_reading():
 
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
-
+# API 3:Calculate daily usage 
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
 def get_daily_meter_usage(meter_id):
     if meter_id not in meters:
