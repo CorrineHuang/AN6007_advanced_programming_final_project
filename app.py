@@ -271,9 +271,7 @@ async def meter_reading():
 # API 3:Get last reading of daily
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
 def get_daily_meter_usage(meter_id):
-    print(meters)
-    existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
-    if existing_meter is None:
+    if meter_id not in meter_list:
         return jsonify({"message": f"Meter {meter_id} not found"}), HTTPStatus.NOT_FOUND
 
     try:
