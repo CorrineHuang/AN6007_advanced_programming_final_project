@@ -1,9 +1,9 @@
-from datetime import datetime
+# from datetime import datetime
 import os
 import re
-import random
-import pandas as pd
-from flask import Flask, json, request, jsonify
+# import random
+# import pandas as pd
+from flask import Flask, json, request, jsonify,render_template
 from http import HTTPStatus
 import json
 import csv
@@ -20,6 +20,7 @@ swagger = Swagger(app)
 
 file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 
+# Load existing accounts
 def load_electricity_accounts_from_file():
     """Load all meter accounts from file"""
     if not os.path.exists(file_path):
@@ -64,87 +65,9 @@ meter_readings = {}
 # --- FRONTEND MAIN PAGE ---
 @app.route("/", methods=["GET"])
 def main():
-    return '''
-        <html>
-            <head>
-                <title>Electricity Meter Service</title>
-                <p>This is out of date. Some buttons may not work
-                <script>
-                    function registerMeter() {
-                        var meterId = document.getElementById("meterId").value.trim();
-
-                        if (!meterId) {
-                            document.getElementById("result").innerText = "Please enter a Meter ID.";
-                            return;
-                        }
-
-                        fetch('/register', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ meter_id: meterId })
-                        })
-                        .then(response => response.json().then(data => ({ status: response.status, body: data }))) 
-                        .then(response => {
-                            document.getElementById("result").innerText = response.body.message;
-                            document.getElementById("meterId").value = response.body.meter_id;
-                        })
-                        .catch(error => {
-                            document.getElementById("result").innerText = "Error registering meter. Please try again.";
-                        });
-                    }
-
-                    function generateReadings() {
-                        var meterId = document.getElementById("meterId").value;
-                        if (!meterId) {
-                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
-                            return;
-                        }
-                        fetch('/generate_readings/' + meterId)
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById("result").innerText = "Readings generated for Meter: " + meterId;
-                        })
-                        .catch(error => {
-                            document.getElementById("result").innerText = "Error generating readings.";
-                        });
-                    }
-
-                    function viewDailyUsage() {
-                        var meterId = document.getElementById("meterId").value;
-                        if (!meterId) {
-                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
-                            return;
-                        }
-                        window.location.href = "/meter/daily/" + meterId;
-                    }
-
-                    function viewMonthlyUsage() {
-                        var meterId = document.getElementById("meterId").value;
-                        if (!meterId) {
-                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
-                            return;
-                        }
-                        window.location.href = "/meter/monthly/" + meterId;
-                    }
-                </script>
-            </head>
-            <body>
-                <h1>Electricity Meter Service</h1>
-                <label for="meterId">Enter Meter ID (format: XXX-XXX-XXX):</label>
-                <input type="text" id="meterId" name="meterId" placeholder="e.g., 123-456-789">
-
-                <button onclick="registerMeter()">Register Meter</button>
-                <button onclick="generateReadings()">Generate Readings</button>
-                <button onclick="viewDailyUsage()">View Daily Usage</button>
-                <button onclick="viewMonthlyUsage()">View Monthly Usage</button>
-
-                <p id="result"></p>
-            </body>
-        </html>
-    '''
-
+    return render_template("function.html")
 # --- BACKEND ROUTES ---
-
+# API 1: Register
 # expect input:
 # meter id
 # region
@@ -201,7 +124,7 @@ def register():
     if not is_valid_meter_id(meter_id):
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), HTTPStatus.BAD_REQUEST
 
-    # Check if meter exists
+    # Check if meter alreaday exists
     existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
     if existing_meter:
         return jsonify({
@@ -235,7 +158,7 @@ def register():
         "message": "Meter registered successfully!"
     }), HTTPStatus.CREATED
 
-
+# API 2: Get meter reading data from IoT meters
 @app.route('/meter-reading', methods=['POST'])
 async def meter_reading():
     """
@@ -321,7 +244,7 @@ async def meter_reading():
         # Check if meter exists
         existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
         if existing_meter is None:
-            return {"error": "Meter does not exist!"}, HTTPStatus.FORBIDDEN
+            return {"error": "Meter does not exist! Please register first."}, HTTPStatus.FORBIDDEN
 
         try:
             reading = MeterReading.validate_and_create(
@@ -350,7 +273,7 @@ async def meter_reading():
 
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
-
+# API 3:Get last reading of today
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
 def get_daily_meter_usage(meter_id):
     print(meters)
@@ -384,7 +307,7 @@ def get_daily_meter_usage(meter_id):
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
-
+# API 4: stop server for maintenance and archive for daily,monthly, batch jobs
 @app.route("/stop_server", methods=["POST"])
 def stop_server():
     global acceptAPI
@@ -394,7 +317,7 @@ def stop_server():
     calculate_monthly_usage(meters, meter_readings)
     acceptAPI = True
 
-    return jsonify({"message": "Server is shutting down."}), 200
+    return jsonify({"message": "Server is under maintenance."}), 200
 
 
 # This randomly generates meter readings - WE DO NOT WANT THIS ANYMORE
@@ -409,7 +332,6 @@ def stop_server():
 
 #     readings = [{"timestamp": str(ts), "reading": reading} for ts, reading in zip(timestamps, meter_readings)]
 #     return jsonify({"message": "Readings generated", "meter_id": meter_id, "readings": readings}), 200
-
 
 # Run the Flask app
 if __name__ == "__main__":
