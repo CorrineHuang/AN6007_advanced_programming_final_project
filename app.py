@@ -10,9 +10,15 @@ import csv
 from models.electricity_account import ElectricityAccount
 from models.meter_reading import MeterReading
 from utils import save_to_half_hourly_csv, calculate_daily_usage, calculate_monthly_usage
+from flasgger import Swagger
 from flask_cors import CORS
 
 app = Flask(__name__)
+app.config['SWAGGER'] = {
+    'title': 'AN6007 ADVANCED PROGRAMMING - Electricity Meter Service API'
+}
+swagger = Swagger(app)
+
 CORS(app)
 file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 
@@ -66,6 +72,46 @@ def main():
 # expect input:meter id,region,area,dwelling type
 @app.route('/register', methods=['POST'])
 def register():
+    """
+    Register a new meter.
+    ---
+    tags:
+      - Meter Management
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        description: JSON payload for registering a meter.
+        required: true
+        schema:
+          type: object
+          required:
+            - meter_id
+            - area
+            - region
+            - dwelling_type
+          properties:
+            meter_id:
+              type: string
+              description: Meter ID in the format XXX-XXX-XXX (numbers only).
+            area:
+              type: string
+              description: The area where the meter is located (e.g. "Jurong").
+            region:
+              type: string
+              description: The region where the meter is located (e.g. "West").
+            dwelling_type:
+              type: string
+              description: Type of dwelling (e.g., "apartment", "house").
+    responses:
+      201:
+        description: Meter registered successfully!
+      400:
+        description: Bad Request. Some fields are missing or invalid. Several messages are possible in this case.
+      409:
+        description: Conflict. This meter is already registered.
+    """
     data = request.get_json()
     meter_id = data.get("meter_id")
 
@@ -105,12 +151,85 @@ def register():
 
     return jsonify({
         "meter_id": meter_id,
-        "message": "Meter Registered Successfully!"
+        "message": "Meter registered successfully!"
     }), HTTPStatus.CREATED
 
 # API 2: Get meter reading data from IoT meters
 @app.route('/meter-reading', methods=['POST'])
 async def meter_reading():
+    """
+    Post electricity reading of a single meter to the server.
+    ---
+    tags:
+      - Meter Readings
+    consumes:
+      - application/x-www-form-urlencoded
+    parameters:
+      - name: meter_id
+        in: formData
+        type: string
+        required: true
+        description: Meter ID in the format XXX-XXX-XXX (numbers only).
+      - name: date
+        in: formData
+        type: string
+        required: true
+        description: Date of the reading in DD-MM-YYYY format (e.g., 28-01-2020).
+      - name: time
+        in: formData
+        type: string
+        required: true
+        description: Time of the reading in HH:MM:SS format (e.g., 14:30:11).
+      - name: electricity_reading
+        in: formData
+        type: string
+        required: true
+        description: The electricity reading value in kWh.
+    responses:
+      202:
+        description: Reading saved successfully.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Reading saved successfully
+                data:
+                  type: object
+                  description: Contains the meter reading details.
+      400:
+        description: Bad Request due to invalid input values.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Invalid reading: [error details]"
+      403:
+        description: Meter does not exist.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Meter does not exist!"
+      500:
+        description: Internal Server Error.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Unexpected error occurred."
+    """
     try:
         # Get form data
         meter_id = request.form.get('meter_id')
@@ -152,8 +271,11 @@ async def meter_reading():
 # API 3:Get last reading of daily
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
 def get_daily_meter_usage(meter_id):
-    if meter_id not in meter_list:
-        return jsonify({"message": f"Meter {meter_id} not found"}), 404
+    print(meters)
+    existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
+    if existing_meter is None:
+        return jsonify({"message": f"Meter {meter_id} not found"}), HTTPStatus.NOT_FOUND
+
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
