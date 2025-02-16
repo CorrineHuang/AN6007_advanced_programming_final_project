@@ -45,7 +45,7 @@ electricity_reading=1000
 
 ## To be discussed
 1. to be more user friendly,  do we need to add a dropdown list for users to choose? for dwelling-type, area and region.
-![alt text](tools\image.png)
+![image](tools\image.png)
 
 2. Need to add the Shiny/Dash thing in the 'More Analysis" button.
 
