@@ -3,8 +3,8 @@ from datetime import datetime
 class MeterReading:
     def __init__(self, meter_id, date, time, electricity_reading):
         self.meter_id = meter_id
-        self.date = date # dd/mm/yyyy
-        self.time = time # hh:mm:ss
+        self.date = date # yyyy/mm/dd
+        self.time = time # hh:mm
         self.electricity_reading = electricity_reading # float
 
     def __str__(self):
@@ -44,15 +44,15 @@ class MeterReading:
 
             # Validate date format
             try:
-                datetime.strptime(date, '%d-%m-%Y')
+                datetime.strptime(date, '%Y-%m-%d')
             except:
-                raise ValueError('Invalid date format. Use DD-MM-YYYY')
+                raise ValueError('Invalid date format. Use YYYY-MM-DD')
 
             # Validate time format
             try:
-                datetime.strptime(time, '%H:%M:%S')
+                datetime.strptime(time, '%H:%M')
             except:
-                raise ValueError('Invalid time format. Use HH:MM:SS')
+                raise ValueError('Invalid time format. Use HH:MM')
 
             # Validate electricity reading
             electricity_reading = float(electricity_reading)

@@ -10,17 +10,5 @@
         "area": "NTU",
         "region": "Jurong",
         "dwelling_type": "xyz"
-    },
-    {
-        "meter_id": "999-999-991",
-        "area": null,
-        "region": null,
-        "dwelling_type": null
-    },
-    {
-        "meter_id": "999-999-909",
-        "area": null,
-        "region": null,
-        "dwelling_type": null
     }
 ]

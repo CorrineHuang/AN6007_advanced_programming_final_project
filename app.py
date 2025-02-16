@@ -1,9 +1,9 @@
-from datetime import datetime
+# from datetime import datetime
 import os
 import re
-import random
+# import random
 import pandas as pd
-from flask import Flask, json, request, jsonify
+from flask import Flask, json, request, jsonify,render_template
 from http import HTTPStatus
 import json
 import csv
@@ -11,10 +11,19 @@ import ast
 from models.electricity_account import ElectricityAccount
 from models.meter_reading import MeterReading
 from utils import save_to_half_hourly_csv, calculate_daily_usage, calculate_monthly_usage
+from flasgger import Swagger
+from flask_cors import CORS
 
 app = Flask(__name__)
+app.config['SWAGGER'] = {
+    'title': 'AN6007 ADVANCED PROGRAMMING - Electricity Meter Service API'
+}
+swagger = Swagger(app)
+
+CORS(app)
 file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 
+# Load existing accounts
 def load_electricity_accounts_from_file():
     """Load all meter accounts from file"""
     if not os.path.exists(file_path):
@@ -33,16 +42,14 @@ def load_electricity_accounts_from_file():
 def save_electricity_accounts_to_file(electricity_account: ElectricityAccount):
     """Save a new meter to the file"""
     # Check if meter_id already exists
-    registered_meter_ids = {account.meter_id for account in meters}
-
-    if electricity_account.meter_id in registered_meter_ids:
+    if electricity_account.meter_id in meter_list:
         return False, "Meter ID already registered"
 
     # Add new account and save all accounts
-    meters.append(electricity_account)
+    meter_accounts.append(electricity_account)
 
     # Convert all accounts to dictionaries for JSON serialization
-    accounts_dict = [account.to_dict() for account in meters]
+    accounts_dict = [account.to_dict() for account in meter_accounts]
 
     with open(file_path, 'w') as f:
         json.dump(accounts_dict, f, indent=4)
@@ -53,100 +60,59 @@ def is_valid_meter_id(meter_id):
     return bool(re.fullmatch(r"\d{3}-\d{3}-\d{3}", meter_id))
 
 # Global list of meters
-meters = load_electricity_accounts_from_file()
+meter_accounts = load_electricity_accounts_from_file()
+meter_list = [i.meter_id for i in meter_accounts]
 meter_readings = {}
 
 # --- FRONTEND MAIN PAGE ---
 @app.route("/", methods=["GET"])
 def main():
-    return '''
-        <html>
-            <head>
-                <title>Electricity Meter Service</title>
-                <p>This is out of date. Some buttons may not work
-                <script>
-                    function registerMeter() {
-                        var meterId = document.getElementById("meterId").value.trim();
-
-                        if (!meterId) {
-                            document.getElementById("result").innerText = "Please enter a Meter ID.";
-                            return;
-                        }
-
-                        fetch('/register', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ meter_id: meterId })
-                        })
-                        .then(response => response.json().then(data => ({ status: response.status, body: data }))) 
-                        .then(response => {
-                            document.getElementById("result").innerText = response.body.message;
-                            document.getElementById("meterId").value = response.body.meter_id;
-                        })
-                        .catch(error => {
-                            document.getElementById("result").innerText = "Error registering meter. Please try again.";
-                        });
-                    }
-
-                    function generateReadings() {
-                        var meterId = document.getElementById("meterId").value;
-                        if (!meterId) {
-                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
-                            return;
-                        }
-                        fetch('/generate_readings/' + meterId)
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById("result").innerText = "Readings generated for Meter: " + meterId;
-                        })
-                        .catch(error => {
-                            document.getElementById("result").innerText = "Error generating readings.";
-                        });
-                    }
-
-                    function viewDailyUsage() {
-                        var meterId = document.getElementById("meterId").value;
-                        if (!meterId) {
-                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
-                            return;
-                        }
-                        window.location.href = "/meter/daily/" + meterId;
-                    }
-
-                    function viewMonthlyUsage() {
-                        var meterId = document.getElementById("meterId").value;
-                        if (!meterId) {
-                            document.getElementById("result").innerText = "Please enter a valid Meter ID.";
-                            return;
-                        }
-                        window.location.href = "/meter/monthly/" + meterId;
-                    }
-                </script>
-            </head>
-            <body>
-                <h1>Electricity Meter Service</h1>
-                <label for="meterId">Enter Meter ID (format: XXX-XXX-XXX):</label>
-                <input type="text" id="meterId" name="meterId" placeholder="e.g., 123-456-789">
-
-                <button onclick="registerMeter()">Register Meter</button>
-                <button onclick="generateReadings()">Generate Readings</button>
-                <button onclick="viewDailyUsage()">View Daily Usage</button>
-                <button onclick="viewMonthlyUsage()">View Monthly Usage</button>
-
-                <p id="result"></p>
-            </body>
-        </html>
-    '''
-
+    return render_template("function.html")
 # --- BACKEND ROUTES ---
-
-# expect input:
-# meter id
-# region
-# area
-# dwelling type
+# API 1: Register
+# expect input:meter id,region,area,dwelling type
 @app.route('/register', methods=['POST'])
 def register():
+    """
+    Register a new meter.
+    ---
+    tags:
+      - Meter Management
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        description: JSON payload for registering a meter.
+        required: true
+        schema:
+          type: object
+          required:
+            - meter_id
+            - area
+            - region
+            - dwelling_type
+          properties:
+            meter_id:
+              type: string
+              description: Meter ID in the format XXX-XXX-XXX (numbers only).
+            area:
+              type: string
+              description: The area where the meter is located (e.g. "Jurong").
+            region:
+              type: string
+              description: The region where the meter is located (e.g. "West").
+            dwelling_type:
+              type: string
+              description: Type of dwelling (e.g., "apartment", "house").
+    responses:
+      201:
+        description: Meter registered successfully!
+      400:
+        description: Bad Request. Some fields are missing or invalid. Several messages are possible in this case.
+      409:
+        description: Conflict. This meter is already registered.
+    """
     data = request.get_json()
     meter_id = data.get("meter_id")
 
@@ -154,22 +120,29 @@ def register():
         return jsonify({"message": "Please provide a meter Id, in the format XXX-XXX-XXX (digits only)"}), HTTPStatus.BAD_REQUEST
 
     if not is_valid_meter_id(meter_id):
-        return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), 400
+        return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), HTTPStatus.BAD_REQUEST
 
-    # Check if meter exists
-    existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
-    if existing_meter:
+    # Check if meter alreaday exists
+    if meter_id in meter_list:
         return jsonify({
             "meter_id": meter_id,
             "message": "This meter is already registered."
         }), HTTPStatus.CONFLICT
 
+    # Check for missing fields: area, region, or dwelling type
+    area = data.get("area")
+    region = data.get("region")
+    dwelling_type = data.get("dwelling_type")
+
+    if not area or not region or not dwelling_type:
+        return jsonify({"message": "Please provide a meter Id, area, region, and dwelling type."}), HTTPStatus.BAD_REQUEST
+
     # Create and save new account
     new_account = ElectricityAccount(
         meter_id=meter_id,
-        area=data.get("area"),
-        region=data.get("region"),
-        dwelling_type=data.get("dwelling_type")
+        area=area,
+        region=region,
+        dwelling_type=dwelling_type
     )
 
     success, message = save_electricity_accounts_to_file(new_account)
@@ -179,12 +152,85 @@ def register():
 
     return jsonify({
         "meter_id": meter_id,
-        "message": "Meter Registered Successfully!"
+        "message": "Meter registered successfully!"
     }), HTTPStatus.CREATED
 
-
+# API 2: Get meter reading data from IoT meters
 @app.route('/meter-reading', methods=['POST'])
 async def meter_reading():
+    """
+    Post electricity reading of a single meter to the server.
+    ---
+    tags:
+      - Meter Readings
+    consumes:
+      - application/x-www-form-urlencoded
+    parameters:
+      - name: meter_id
+        in: formData
+        type: string
+        required: true
+        description: Meter ID in the format XXX-XXX-XXX (numbers only).
+      - name: date
+        in: formData
+        type: string
+        required: true
+        description: Date of the reading in DD-MM-YYYY format (e.g., 28-01-2020).
+      - name: time
+        in: formData
+        type: string
+        required: true
+        description: Time of the reading in HH:MM:SS format (e.g., 14:30:11).
+      - name: electricity_reading
+        in: formData
+        type: string
+        required: true
+        description: The electricity reading value in kWh.
+    responses:
+      202:
+        description: Reading saved successfully.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Reading saved successfully
+                data:
+                  type: object
+                  description: Contains the meter reading details.
+      400:
+        description: Bad Request due to invalid input values.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Invalid reading: [error details]"
+      403:
+        description: Meter does not exist.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Meter does not exist!"
+      500:
+        description: Internal Server Error.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Unexpected error occurred."
+    """
     try:
         # Get form data
         meter_id = request.form.get('meter_id')
@@ -193,9 +239,8 @@ async def meter_reading():
         electricity_reading = request.form.get('electricity_reading')
 
         # Check if meter exists
-        existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
-        if existing_meter is None:
-            return {"error": "Meter does not exist!"}, HTTPStatus.FORBIDDEN
+        if meter_id not in meter_list:
+            return {"error": "Meter does not exist! Please register first."}, HTTPStatus.FORBIDDEN
 
         try:
             reading = MeterReading.validate_and_create(
@@ -225,9 +270,10 @@ async def meter_reading():
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
+      
+# API 3:Get last reading of daily
 @app.route('/meters/<meter_id>/daily/latest', methods=['GET'])
 def get_latest_daily_meter_usage(meter_id):
-
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
@@ -252,6 +298,7 @@ def get_latest_daily_meter_usage(meter_id):
         return jsonify({"message": "Daily usage file not found"}), 404
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+
 
 @app.route('/meters/<meter_id>/daily', methods=['GET'])
 def get_daily_readings(meter_id):
@@ -283,6 +330,7 @@ def get_daily_readings(meter_id):
         return jsonify({"message": "Daily usage file not found"}), 404
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+
 
 @app.route('/meters/<meter_id>/monthly/latest', methods=['GET'])
 def get_latest_monthly_meter_usage(meter_id):
@@ -341,32 +389,19 @@ def get_monthly_readings(meter_id):
         return jsonify({"message": "Monthly usage file not found"}), 404
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+      
 
 @app.route("/stop_server", methods=["POST"])
 def stop_server():
     global acceptAPI
 
     acceptAPI = False
-    calculate_daily_usage(meters, meter_readings)
+    calculate_daily_usage(meter_accounts, meter_readings)
     calculate_monthly_usage()
     meter_readings.clear()
     acceptAPI = True
 
     return jsonify({"message": "Server is shutting down."}), 200
-
-
-# This randomly generates meter readings - WE DO NOT WANT THIS ANYMORE
-# @app.route('/generate_readings/<meter_id>', methods=['GET'])
-# def generate_readings(meter_id):
-#     if meter_id not in meters:
-#         return jsonify({"message": "Meter not found, please register first"}), 404
-
-#     timestamps = pd.date_range(start=pd.Timestamp.now().date(), periods=48, freq="30min")
-#     meter_readings = [round(random.uniform(0.1, 2.5), 2) for _ in range(len(timestamps))]
-#     print(meter_readings)
-
-#     readings = [{"timestamp": str(ts), "reading": reading} for ts, reading in zip(timestamps, meter_readings)]
-#     return jsonify({"message": "Readings generated", "meter_id": meter_id, "readings": readings}), 200
 
 
 # Run the Flask app

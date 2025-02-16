@@ -1,0 +1,4 @@
+Flask
+pandas
+flasgger
+flask_cors
