@@ -29,12 +29,17 @@ async def save_to_half_hourly_csv(data):
         raise
 
 
-def calculate_daily_usage(meters, meter_readings):
+
+import csv
+import os
+import pandas as pd
+
+def calculate_daily_usage(meter_accounts, meter_readings):
     """Calculate daily electricity usage and save to CSV."""
     daily_usage_data = []
 
     for meter_id, readings in meter_readings.items():
-        account = next((meter for meter in meters if meter.meter_id == meter_id), None)
+        account = next((meter for meter in meter_accounts if meter.meter_id == meter_id), None)
 
         daily_usage = readings[-1].electricity_reading - readings[0].electricity_reading
         daily_usage_data.append([meter_id, account.region, account.area, readings[0].date, readings[0].time, daily_usage])
@@ -55,12 +60,12 @@ def calculate_daily_usage(meters, meter_readings):
         raise
 
 
-def calculate_monthly_usage(meter_readings):
+def calculate_monthly_usage(meter_list):
     """Calculate monthly electricity usage and save to CSV."""
     df = pd.read_csv(daily_file)
     df['Date'] = pd.to_datetime(df['Date']).strftime("%b-%Y")
     current_month = datetime.now(pytz.timezone("Asia/Singapore")).strftime("%b-%Y")
-
+    # I think we should give users the last month, not the current month 
     if os.path.exists(monthly_file):
         monthly_df = pd.read_csv(monthly_file)
     else:
@@ -68,7 +73,7 @@ def calculate_monthly_usage(meter_readings):
 
     monthly_df["Month"] = monthly_df["Month"].astype(str)
 
-    for meter_id in meter_readings:
+    for meter_id in meter_list:
         df_month = df[(df["Meter_id"] == meter_id) & (df["Date"] == current_month)]
         if df_month.empty:
             continue

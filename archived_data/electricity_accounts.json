@@ -16,5 +16,65 @@
         "area": "NTU",
         "region": "Jurong West",
         "dwelling_type": "1 room"
+    },
+    {
+        "meter_id": "666-777-444",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "4"
+    },
+    {
+        "meter_id": "666-777-443",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "x"
+    },
+    {
+        "meter_id": "666-777-885",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "x"
+    },
+    {
+        "meter_id": "666-777-111",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "4"
+    },
+    {
+        "meter_id": "666-777-883",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "4"
+    },
+    {
+        "meter_id": "666-777-844",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "x"
+    },
+    {
+        "meter_id": "123-456-789",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "4"
+    },
+    {
+        "meter_id": "111-222-333",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "x"
+    },
+    {
+        "meter_id": "123-123-123",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "4"
+    },
+    {
+        "meter_id": "666-777-866",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "x"
     }
 ]

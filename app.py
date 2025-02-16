@@ -2,7 +2,7 @@
 import os
 import re
 # import random
-# import pandas as pd
+import pandas as pd
 from flask import Flask, json, request, jsonify,render_template
 from http import HTTPStatus
 import json
@@ -10,8 +10,10 @@ import csv
 from models.electricity_account import ElectricityAccount
 from models.meter_reading import MeterReading
 from utils import save_to_half_hourly_csv, calculate_daily_usage, calculate_monthly_usage
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 
 # Load existing accounts
@@ -33,16 +35,14 @@ def load_electricity_accounts_from_file():
 def save_electricity_accounts_to_file(electricity_account: ElectricityAccount):
     """Save a new meter to the file"""
     # Check if meter_id already exists
-    registered_meter_ids = {account.meter_id for account in meters}
-
-    if electricity_account.meter_id in registered_meter_ids:
+    if electricity_account.meter_id in meter_list:
         return False, "Meter ID already registered"
 
     # Add new account and save all accounts
-    meters.append(electricity_account)
+    meter_accounts.append(electricity_account)
 
     # Convert all accounts to dictionaries for JSON serialization
-    accounts_dict = [account.to_dict() for account in meters]
+    accounts_dict = [account.to_dict() for account in meter_accounts]
 
     with open(file_path, 'w') as f:
         json.dump(accounts_dict, f, indent=4)
@@ -53,7 +53,8 @@ def is_valid_meter_id(meter_id):
     return bool(re.fullmatch(r"\d{3}-\d{3}-\d{3}", meter_id))
 
 # Global list of meters
-meters = load_electricity_accounts_from_file()
+meter_accounts = load_electricity_accounts_from_file()
+meter_list = [i.meter_id for i in meter_accounts]
 meter_readings = {}
 
 # --- FRONTEND MAIN PAGE ---
@@ -62,11 +63,7 @@ def main():
     return render_template("function.html")
 # --- BACKEND ROUTES ---
 # API 1: Register
-# expect input:
-# meter id
-# region
-# area
-# dwelling type
+# expect input:meter id,region,area,dwelling type
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -79,8 +76,7 @@ def register():
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), HTTPStatus.BAD_REQUEST
 
     # Check if meter alreaday exists
-    existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
-    if existing_meter:
+    if meter_id in meter_list:
         return jsonify({
             "meter_id": meter_id,
             "message": "This meter is already registered."
@@ -123,8 +119,7 @@ async def meter_reading():
         electricity_reading = request.form.get('electricity_reading')
 
         # Check if meter exists
-        existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
-        if existing_meter is None:
+        if meter_id not in meter_list:
             return {"error": "Meter does not exist! Please register first."}, HTTPStatus.FORBIDDEN
 
         try:
@@ -154,30 +149,30 @@ async def meter_reading():
 
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
-# API 3:Get last reading of today
+# API 3:Get last reading of daily
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
 def get_daily_meter_usage(meter_id):
-    if meter_id not in meters:
+    if meter_id not in meter_list:
         return jsonify({"message": f"Meter {meter_id} not found"}), 404
-
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
-            header = next(reader)  
+            header = next(reader,None)  
+            if not header:  
+                return jsonify({"message": "Daily usage file is empty"}), 404
             last_reading = None
-
             for row in reader:
+                if len(row) < 4:
+                    continue
                 if row[0] == meter_id:
                     last_reading = row
 
             if last_reading:
                 return jsonify({
                     "meter_id": last_reading[0],
-                    "region":last_reading[1],
-                    "area": last_reading[2],
-                    "date": last_reading[3],
-                    "time": last_reading[4],
-                    "usage": last_reading[5]
+                    "date": last_reading[1],
+                    "time": last_reading[2],
+                    "usage": last_reading[3]
                 }), 200
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
 
@@ -187,31 +182,16 @@ def get_daily_meter_usage(meter_id):
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
 # API 4: stop server for maintenance and archive for daily,monthly, batch jobs
-@app.route("/stop_server", methods=["POST"])
+@app.route("/stop_server", methods=["POST",'GET'])
 def stop_server():
     global acceptAPI
-
     acceptAPI = False
-    calculate_daily_usage(meters, meter_readings)
-    calculate_monthly_usage(meters, meter_readings)
+    meter_readings= pd.read_csv('archived_data\half_hourly_readings.csv')
+    calculate_daily_usage(meter_accounts, meter_readings)
+    calculate_monthly_usage(meter_list)
     acceptAPI = True
 
     return jsonify({"message": "Server is under maintenance."}), 200
-
-
-# This randomly generates meter readings - WE DO NOT WANT THIS ANYMORE
-# @app.route('/generate_readings/<meter_id>', methods=['GET'])
-# def generate_readings(meter_id):
-#     if meter_id not in meters:
-#         return jsonify({"message": "Meter not found, please register first"}), 404
-
-#     timestamps = pd.date_range(start=pd.Timestamp.now().date(), periods=48, freq="30min")
-#     meter_readings = [round(random.uniform(0.1, 2.5), 2) for _ in range(len(timestamps))]
-#     print(meter_readings)
-
-#     readings = [{"timestamp": str(ts), "reading": reading} for ts, reading in zip(timestamps, meter_readings)]
-#     return jsonify({"message": "Readings generated", "meter_id": meter_id, "readings": readings}), 200
-
 # Run the Flask app
 if __name__ == "__main__":
     app.run(debug=True)

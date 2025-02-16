@@ -4,7 +4,6 @@
 <div class="container text-center">
     <h1 class="display-4 mt-5">Smart Meter Management System</h1>
     <p class="lead mt-4">Please select an action:</p>
-    
     <div class="row mt-4">
         <div class="col-md-3">
             <button class="btn btn-primary w-100" onclick="showSection('registerSection')">📝 Register Meter</button>
@@ -25,43 +24,112 @@
     </div> -->
 </div>
 
-<!-- Register Meter -->
-<div id="registerSection" class="form-section mt-4" style="display:none;">
+<!-- Register Meter Section -->
+<div id="registerSection" class="form-section" style="display:none;">
     <h2 class="mb-4">📝 Register New Meter</h2>
     <form id="registerForm">
-        <input type="text" class="form-control mb-3" placeholder="Meter ID (123-456-789)" id="meter_id" required>
-        <input type="text" class="form-control mb-3" placeholder="Region" id="region" required>
-        <input type="text" class="form-control mb-3" placeholder="Dwelling Type" id="dwelling_type" required>
+        <div class="mb-3">
+            <input type="text" class="form-control" 
+                    placeholder="Meter ID (123-456-789)"
+                    pattern="\d{3}-\d{3}-\d{3}"
+                    id="meter_id" required>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" 
+                        placeholder="Region" id="region" required>
+            </div>
+            <div class="col-md-6">
+                <input type="text" class="form-control" 
+                        placeholder="Area" id="area" required>
+            </div>
+        </div>
+        <div class="mb-3">
+            <input type="text" class="form-control" 
+                    placeholder="Dwelling Type" id="dwelling_type" required>
+        </div>
         <button type="submit" class="btn btn-primary w-100">Register</button>
     </form>
     <div id="registerMessage" class="mt-3"></div>
 </div>
 
-<!-- Submit Reading -->
-<div id="meterReadingSection" class="form-section mt-4" style="display:none;">
+<!-- Submit Meter Reading Section -->
+<div id="meterReadingSection" class="form-section" style="display:none;">
     <h2 class="mb-4">⚡ Submit Meter Reading</h2>
     <form id="readingForm">
-        <input type="text" class="form-control mb-3" placeholder="Meter ID" id="reading_meter_id" required>
-        <input type="date" class="form-control mb-3" id="date" required>
-        <input type="time" class="form-control mb-3" id="time" step="1800" required>
-        <input type="number" class="form-control mb-3" placeholder="Reading (kWh)" id="electricity_reading" required>
-        <button type="submit" class="btn btn-success w-100">Submit</button>
+        <div class="mb-3">
+            <input type="text" class="form-control" 
+                    placeholder="Meter ID"
+                    id="reading_meter_id" required>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <input type="date" class="form-control" 
+                        id="date" required>
+            </div>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    const dateInput = document.getElementById("date");
+                
+                    function getCurrentDate() {
+                        let today = new Date();
+                        let year = today.getFullYear();
+                        let month = String(today.getMonth() + 1).padStart(2, '0');
+                        let day = String(today.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    }
+                
+                    // today's date by default
+                    dateInput.value = getCurrentDate();
+                });
+                </script>
+            <div class="col-md-6">
+                <input type="time" class="form-control"
+                        id="time" step="60" required>
+            </div>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    const timeInput = document.getElementById("time");
+                
+                    function getNearestHalfHour() {
+                        let now = new Date();
+                        let minutes = now.getMinutes();
+                        let roundedMinutes = minutes < 30 ? "00" : "30"; 
+                        let hours = String(now.getHours()).padStart(2, '0');
+                
+                        return `${hours}:${roundedMinutes}`;
+                    }
+                
+                    timeInput.value = getNearestHalfHour();
+                });
+                </script>
+        </div>
+        <div class="mb-3">
+            <input type="number" step="0.01" 
+                    class="form-control"
+                    placeholder="Current Reading (kWh)"
+                    id="electricity_reading" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Submit Reading</button>
     </form>
     <div id="readingMessage" class="mt-3"></div>
 </div>
 
 <!-- Daily Usage Query -->
-<div id="dailyUsageSection" class="form-section mt-4" style="display:none;">
+<div id="dailyUsageSection" class="form-section" style="display:none;">
     <h2 class="mb-4">📊 Daily Usage Query</h2>
-    <input type="text" class="form-control mb-3" placeholder="Meter ID (123-456-789)" id="queryMeterId">
-    <button class="btn btn-info w-100" onclick="queryUsage()">Query</button>
-    <div id="usageResult" class="mt-3"></div>
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" 
+                placeholder="Enter Meter ID"
+                id="queryMeterId">
+        <button class="btn btn-primary" onclick="queryUsage()">Query</button>
+    </div>
+    <div id="usageResult"></div>
 </div>
-
 <!-- Monthly Bill Query -->
 <div id="monthlyBillSection" class="form-section mt-4" style="display:none;">
     <h2 class="mb-4">💳 Monthly Bill Query</h2>
-    <input type="text" class="form-control mb-3" placeholder="Meter ID (123-456-789)" id="queryBillMeterId">
+    <input type="text" class="form-control mb-3" placeholder="Meter ID (999-999-999)" id="queryBillMeterId">
     <button class="btn btn-warning w-100" onclick="queryMonthlyBill()">Query</button>
     <div id="billResult" class="mt-3"></div>
 </div>
@@ -74,31 +142,136 @@ function showSection(sectionId) {
     document.getElementById("monthlyBillSection").style.display = "none";
     document.getElementById(sectionId).style.display = "block";
 }
+function showMessage(selector, type, text) {
+    const element = $(selector);
+    element.html(`<div class="alert alert-${type}">${text}</div>`);
+    element.fadeIn().delay(9000).fadeOut(); 
+}
+// Register Functionality
+$(document).ready(function(){
+console.log("Document is ready");
+$('#registerForm').submit(async function(e) {
+    e.preventDefault();
+    const data = {
+        meter_id: $('#meter_id').val(),
+        region: $('#region').val(),
+        area: $('#area').val(),
+        dwelling_type: $('#dwelling_type').val()
+    };    
+try {
+        const response = await fetch('/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
 
-// async function stopServer() {
-//     try {
-//         const response = await fetch('/stop_server', { method: 'POST' });
-//         const data = await response.json();
-//         alert(data.message);
-//     } catch (error) {
-//         alert("Failed to stop server");
-//     }
-// }
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Registration failed');
+        }
 
-async function queryMonthlyBill() {
-    const meterId = document.getElementById("queryBillMeterId").value;
-    if (!meterId.match(/\d{3}-\d{3}-\d{3}/)) {
-        document.getElementById("billResult").innerHTML = `<div class='alert alert-danger'>Please enter a valid Meter ID</div>`;
-        return;
-    }
-    try {
-        const response = await fetch(`/meter/monthly/${meterId}`);
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        document.getElementById("billResult").innerHTML = `<div class='alert alert-success'>Meter ${data.meter_id} - Total Bill: ${data.total_bill} USD</div>`;
+        const result = await response.json();
+        showMessage('#registerMessage', 'success', result.message);
+        $('#registerForm')[0].reset();
+        setTimeout(() => {
+        history.pushState({}, "", "/register");
+    }, 500);
     } catch (error) {
-        document.getElementById("billResult").innerHTML = `<div class='alert alert-danger'>${error.message}</div>`;
+        showMessage('#registerMessage', 'danger', error.message);
+    }
+});
+
+// Submit Meter Reading Manually
+$('#readingForm').submit(async function(e) {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('meter_id', $('#reading_meter_id').val());
+    formData.append('date', $('#date').val());
+    formData.append('time', $('#time').val());
+    formData.append('electricity_reading', $('#electricity_reading').val());
+
+    try {
+        const response = await fetch('/meter-reading', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            showMessage('#readingMessage', 'success', 
+                `${result.message}<br>Latest Reading: ${result.data.electricity_reading}kWh`);
+            $('#readingForm')[0].reset();
+            history.pushState({}, "", "/meter-reading");
+        } else {
+            showMessage('#readingMessage', 'danger', result.error);
+        }
+    } catch (error) {
+        showMessage('#readingMessage', 'danger', 'Submission failed, please try again later');
+    }
+})
+});
+
+// Daily Usage Query for Daily
+async function queryUsage() {
+    const meterId = $('#queryMeterId').val();
+    if (!meterId.match(/^\d{3}-\d{3}-\d{3}$/)) {
+        return showMessage('#usageResult', 'danger', 'Please enter a valid Meter ID');
+    }
+
+    try {
+        const response = await fetch(`/meter/daily/${meterId}`);
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Invalid response from server (not JSON)");
+        }
+        const data = await response.json();
+
+        const html = `
+            <div class="alert alert-success">
+                <h5>Meter ${data.meter_id}</h5>
+                <table class="table">
+                    <tr><th>Last Reading Day</th><td>${data.date} ${data.time}</td></tr>
+                    <tr><th>Daily Usage</th><td>${data.usage} kWh</td></tr>
+                </table>
+            </div>
+        `;
+        $('#usageResult').html(html);
+        history.pushState({}, "", `/meter/daily/${meterId}`);
+        // Need to check if we need region and area here. Change me 
+        // const html = `
+        //     <div class="alert alert-success">
+        //         <h5>Meter ${data.meter_id}</h5>
+        //         <table class="table">
+        //             <tr><th>Region</th><td>${data.region}</td></tr>
+        //             <tr><th>Area</th><td>${data.area}</td></tr>
+        //             <tr><th>Last Reading Time</th><td>${data.date} ${data.time}</td></tr>
+        //             <tr><th>Current Usage</th><td>${data.usage} kWh</td></tr>
+        //         </table>
+        //     </div>
+        // `;
+        // $('#usageResult').html(html);
+        // history.pushState({}, "", `/meter/daily/${meterId}`);
+
+    } catch (error) {
+        showMessage('#usageResult', 'danger', error.message);
     }
 }
+
+// Monthly Billing 
+
+// Stop Server 
+async function stopServer() {
+        try {
+            const response = await fetch('/stop_server', { method: 'POST' });
+            const data = await response.json();
+            alert(data.message);
+        } catch (error) {
+            alert("Failed to stop server");
+        }
+    }
 </script>
 {% endblock %}
+
