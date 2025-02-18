@@ -2,8 +2,8 @@
 
 {% block content %}
 <div class="container text-center">
-    <h1 class="display-4 mt-5">Smart Meter Management System</h1>
-    <p class="lead mt-4">Please select an action:</p>
+    <h1 class="display-4 mt-5">Smart Electricity Management System</h1>
+    <p class="lead mt-4">Welcome! Please select an action:</p>
     <div class="row mt-4">
         <div class="col-md-3">
             <button class="btn btn-primary w-100" onclick="showSection('registerSection')">📝 Register Meter</button>
@@ -25,7 +25,7 @@
 </div>
 
 <!-- Register Meter Section -->
-<div id="registerSection" class="form-section" style="display:none;">
+<div id="registerSection" class="form-section mt-4" style="display:none;">
     <h2 class="mb-4">📝 Register New Meter</h2>
     <form id="registerForm">
         <div class="mb-3">
@@ -54,12 +54,12 @@
 </div>
 
 <!-- Submit Meter Reading Section -->
-<div id="meterReadingSection" class="form-section" style="display:none;">
+<div id="meterReadingSection" class="form-section mt-4" style="display:none;">
     <h2 class="mb-4">⚡ Submit Meter Reading</h2>
     <form id="readingForm">
         <div class="mb-3">
             <input type="text" class="form-control" 
-                    placeholder="Meter ID"
+                    placeholder="Meter ID (123-456-789)"
                     id="reading_meter_id" required>
         </div>
         <div class="row g-3 mb-3">
@@ -116,11 +116,11 @@
 </div>
 
 <!-- Daily Usage Query -->
-<div id="dailyUsageSection" class="form-section" style="display:none;">
+<div id="dailyUsageSection" class="form-section mt-4" style="display:none;">
     <h2 class="mb-4">📊 Daily Usage Query</h2>
     <div class="input-group mb-3">
         <input type="text" class="form-control" 
-                placeholder="Enter Meter ID"
+                placeholder="Meter ID (123-456-789)"
                 id="queryMeterId">
         <button class="btn btn-primary" onclick="queryUsage()">Query</button>
     </div>
@@ -129,7 +129,7 @@
 <!-- Monthly Bill Query -->
 <div id="monthlyBillSection" class="form-section mt-4" style="display:none;">
     <h2 class="mb-4">💳 Monthly Bill Query</h2>
-    <input type="text" class="form-control mb-3" placeholder="Meter ID (999-999-999)" id="queryBillMeterId">
+    <input type="text" class="form-control mb-3" placeholder="Meter ID (123-456-789)" id="queryBillMeterId">
     <button class="btn btn-warning w-100" onclick="queryMonthlyBill()">Query</button>
     <div id="billResult" class="mt-3"></div>
 </div>
@@ -215,7 +215,7 @@ $('#readingForm').submit(async function(e) {
 async function queryUsage() {
     const meterId = $('#queryMeterId').val();
     if (!meterId.match(/^\d{3}-\d{3}-\d{3}$/)) {
-        return showMessage('#usageResult', 'danger', 'Please enter a valid Meter ID');
+        return showMessage('#usageResult', 'danger', 'Please enter a valid Meter ID (123-456-789)');
     }
 
     try {
@@ -266,7 +266,7 @@ async function queryUsage() {
 async function queryMonthlyBill() {
     const meterId = $('#queryBillMeterId').val();
     if (!meterId.match(/^\d{3}-\d{3}-\d{3}$/)) {
-        return showMessage('#billResult', 'danger', 'Please enter a valid Meter ID');
+        return showMessage('#billResult', 'danger', 'Please enter a valid Meter ID (123-456-789)');
     }
 
     try {
