@@ -1,15 +1,26 @@
+<!-- This part is for our main menu in the top row, including Home,More analysis and System Maintenance. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Meter Management System</title>
+    <!-- using this link, so we can need formats and buttons of Bootstrap. -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- put formats in style, so we will have the same format for all. -->
     <style>
         .navbar { margin-bottom: 20px; }
         .card { margin-top: 20px; }
         .form-section { max-width: 600px; margin: 0 auto; }
+        .navbar a.navbar-brand,
+        .navbar button {
+            font-family: 'Poppins', sans-serif;  
+            font-size: 20px;  
+            font-weight: normal; 
+            line-height: 2;
+        }
     </style>
+    <!-- using this, so we can use jquery, which is very helpful. -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
@@ -18,7 +29,6 @@
             <a class="navbar-brand" href="/">🏠 Home</a>
             <a class="navbar-brand" href="/">📊 More Analysis</a>
             <div class="ms-auto">
-                <!-- <button class="btn btn-danger" onclick="stopServer()">🛑 Stop Server</button> -->
                 <button class="btn btn-default text-white" onclick="stopServer()">🛑 System Maintenance</button>
             </div>
         </div>
