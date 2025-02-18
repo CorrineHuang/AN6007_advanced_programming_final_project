@@ -73,9 +73,9 @@ def calculate_monthly_usage():
         print(f"Error: {daily_file} is empty.")
         return
 
-    df['Date'] = pd.to_datetime(df['Date']).dt.strftime("%b-%Y")
+    df['Date'] = pd.to_datetime(df['Date']).dt.strftime("%Y-%b")
 
-    current_month = datetime.now(pytz.timezone("Asia/Singapore")).strftime("%b-%Y")
+    current_month = datetime.now(pytz.timezone("Asia/Singapore")).strftime("%Y-%b")
     # I think we should give users the last month, not the current month 
     if os.path.exists(monthly_file):
         monthly_df = pd.read_csv(monthly_file)
