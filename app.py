@@ -146,7 +146,7 @@ def register():
     )
 
     success, message = save_electricity_accounts_to_file(new_account)
-
+    #meter_list.append(electricity_account.meter_id)
     if not success:
         return jsonify({"message": message}), HTTPStatus.BAD_REQUEST
 
@@ -397,7 +397,7 @@ def stop_server():
     meter_readings.clear()
     acceptAPI = True
 
-    return jsonify({"message": "Server is shutting down."}), 200
+    return jsonify({"message": "Server is shutting down. We are working on batch jobs. Good Night!"}), 200
 
 
 # Run the Flask app

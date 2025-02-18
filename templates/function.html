@@ -1,6 +1,7 @@
 {% extends "menu.html" %}
-
+<!-- This part is for our main functions. -->
 {% block content %}
+<!-- First, we create 4 main buttons. -->
 <div class="container text-center">
     <h1 class="display-4 mt-5">Smart Electricity Management System</h1>
     <p class="lead mt-4">Welcome! Please select an action:</p>
@@ -18,17 +19,18 @@
             <button class="btn btn-warning w-100" onclick="showSection('monthlyBillSection')">💳 Monthly Bill</button>
         </div>
     </div>
-    
-    <!-- <div class="text-end mt-3">
-        <button class="btn btn-danger" onclick="stopServer()">🛑 Stop Server</button>
-    </div> -->
 </div>
 
 <!-- Register Meter Section -->
+<!-- This part is for register and the form. -->
 <div id="registerSection" class="form-section mt-4" style="display:none;">
     <h2 class="mb-4">📝 Register New Meter</h2>
     <form id="registerForm">
         <div class="mb-3">
+<!-- 
+- 'placeholder' is the words and notes that we want to show to users by default. 
+- 'Required' means that this information is required.
+Notes: it's better to change this part to dropdown list, which is more user-friendly.-->
             <input type="text" class="form-control" 
                     placeholder="Meter ID (123-456-789)"
                     pattern="\d{3}-\d{3}-\d{3}"
@@ -67,6 +69,8 @@
                 <input type="date" class="form-control" 
                         id="date" required>
             </div>
+<!-- For this part:
+ We want it to be more user-friendly, which can help users find the nearby half an hour. -->
             <script>
                 document.addEventListener("DOMContentLoaded", function () {
                     const dateInput = document.getElementById("date");
@@ -79,7 +83,7 @@
                         return `${year}-${month}-${day}`;
                     }
                 
-                    // today's date by default
+                    // for now, today's date by default
                     dateInput.value = getCurrentDate();
                 });
                 </script>
@@ -126,6 +130,7 @@
     </div>
     <div id="usageResult"></div>
 </div>
+
 <!-- Monthly Bill Query -->
 <div id="monthlyBillSection" class="form-section mt-4" style="display:none;">
     <h2 class="mb-4">💳 Monthly Bill Query</h2>
@@ -142,11 +147,14 @@ function showSection(sectionId) {
     document.getElementById("monthlyBillSection").style.display = "none";
     document.getElementById(sectionId).style.display = "block";
 }
+// The delay(9000) is how long the msg is.
 function showMessage(selector, type, text) {
     const element = $(selector);
     element.html(`<div class="alert alert-${type}">${text}</div>`);
     element.fadeIn().delay(9000).fadeOut(); 
 }
+
+// The following is how we define our function to interact with back end.
 // Register Functionality
 $(document).ready(function(){
 console.log("Document is ready");
@@ -306,7 +314,7 @@ async function stopServer() {
             const data = await response.json();
             alert(data.message);
         } catch (error) {
-            alert("Failed to stop server");
+            alert("Sorry, failed to stop server. Please try again later.");
         }
     }
 </script>
