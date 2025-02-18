@@ -305,24 +305,20 @@ def get_daily_readings(meter_id):
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
-            header = next(reader)  # Skip header row
-            readings = []
+            header = next(reader)
+            last_reading = None
 
             for row in reader:
-                # If using standard CSV format (not stringified lists)
                 if row[0] == meter_id:
-                    readings.append({
-                        "meter_id": row[0],
-                        "region": row[1],
-                        "area": row[2],
-                        "date": row[3],
-                        "usage": float(row[4])
-                    })
+                    last_reading = row
 
-            if readings:
+            if last_reading:
                 return jsonify({
-                    "meter_id": meter_id,
-                    "readings": readings
+                    "meter_id": last_reading[0],
+                    "region":last_reading[1],
+                    "area": last_reading[2],
+                    "date": last_reading[3],
+                    "usage": last_reading[4]
                 }), 200
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
 

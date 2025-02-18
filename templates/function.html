@@ -219,7 +219,7 @@ async function queryUsage() {
     }
 
     try {
-        const response = await fetch(`/meter/daily/${meterId}`);
+        const response = await fetch(`/meters/${meterId}/daily/latest`);
         if (!response.ok) {
             throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -233,13 +233,15 @@ async function queryUsage() {
             <div class="alert alert-success">
                 <h5>Meter ${data.meter_id}</h5>
                 <table class="table">
-                    <tr><th>Last Reading Day</th><td>${data.date} ${data.time}</td></tr>
+                    <tr><th>Region</th><td>${data.region}</td></tr>
+                    <tr><th>Area</th><td>${data.area}</td></tr>
+                    <tr><th>Last Reading Day</th><td>${data.date}</td></tr>
                     <tr><th>Daily Usage</th><td>${data.usage} kWh</td></tr>
                 </table>
             </div>
         `;
         $('#usageResult').html(html);
-        history.pushState({}, "", `/meter/daily/${meterId}`);
+        history.pushState({}, "", `/meters/${meterId}/daily/latest`);
         // Need to check if we need region and area here. Change me 
         // const html = `
         //     <div class="alert alert-success">
@@ -260,7 +262,42 @@ async function queryUsage() {
     }
 }
 
-// Monthly Billing 
+// Monthly Billing
+async function queryMonthlyBill() {
+    const meterId = $('#queryBillMeterId').val();
+    if (!meterId.match(/^\d{3}-\d{3}-\d{3}$/)) {
+        return showMessage('#billResult', 'danger', 'Please enter a valid Meter ID');
+    }
+
+    try {
+        const response = await fetch(`/meters/${meterId}/monthly/latest`);
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Invalid response from server (not JSON)");
+        }
+        const data = await response.json();
+
+        const html = `
+            <div class="alert alert-success">
+                <h5>Meter ${data.meter_id}</h5>
+                <table class="table">
+                    <tr><th>Region</th><td>${data.region}</td></tr>
+                    <tr><th>Area</th><td>${data.area}</td></tr>
+                    <tr><th>Last Reading Month</th><td>${data.date}</td></tr>
+                    <tr><th>Monthly Usage</th><td>${data.usage} kWh</td></tr>
+                </table>
+            </div>
+        `;
+        $('#billResult').html(html);
+        history.pushState({}, "", `/meters/${meterId}/monthly/latest`);
+
+    } catch (error) {
+        showMessage('#usageResult', 'danger', error.message);
+    }
+}
 
 // Stop Server 
 async function stopServer() {
