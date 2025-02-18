@@ -149,6 +149,8 @@ def register():
     #meter_list.append(electricity_account.meter_id)
     if not success:
         return jsonify({"message": message}), HTTPStatus.BAD_REQUEST
+    
+    meter_list.append(meter_id)
 
     return jsonify({
         "meter_id": meter_id,

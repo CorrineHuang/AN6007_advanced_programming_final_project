@@ -16,5 +16,23 @@
         "area": "sbw",
         "region": "central",
         "dwelling_type": "4-room"
+    },
+    {
+        "meter_id": "999-999-111",
+        "area": "asd",
+        "region": "asd",
+        "dwelling_type": "asd"
+    },
+    {
+        "meter_id": "999-999-001",
+        "area": "cds",
+        "region": "asd",
+        "dwelling_type": "asd"
+    },
+    {
+        "meter_id": "999-999-115",
+        "area": "asd",
+        "region": "asd",
+        "dwelling_type": "asd"
     }
 ]
