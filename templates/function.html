@@ -1,19 +1,20 @@
+<!-- Thankful to Open Source Github website Code: https://github.com/StartBootstrap/startbootstrap-modern-business  -->
 {% extends "menu.html" %}
-<!-- This part is for our main functions. -->
+<!-- This part is for our main buttons and functions, connnected with APIs-->
 {% block content %}
 <!-- First, we create 4 main buttons. -->
-<div class="container text-center">
-    <h1 class="display-4 mt-5">Smart Electricity Management System</h1>
-    <p class="lead mt-4">Welcome! Please select an action:</p>
-    <div class="row mt-4">
+<div class="container px-5 text-center">
+    <h1 class="display-5 mt-5">Smart Electricity Management System</h1>
+    <p class="lead mt-5">Welcome! Please choose an action:</p>
+    <div class="row mt-6">
         <div class="col-md-3">
             <button class="btn btn-primary w-100" onclick="showSection('registerSection')">📝 Register Meter</button>
         </div>
         <div class="col-md-3">
-            <button class="btn btn-success w-100" onclick="showSection('meterReadingSection')">⚡ Submit Reading</button>
+            <button class="btn btn-info w-100" onclick="showSection('meterReadingSection')">⚡ Submit Reading</button>
         </div>
         <div class="col-md-3">
-            <button class="btn btn-info w-100" onclick="showSection('dailyUsageSection')">📊 Daily Usage</button>
+            <button class="btn btn-success w-100" onclick="showSection('dailyUsageSection')">📊 Daily Usage</button>
         </div>
         <div class="col-md-3">
             <button class="btn btn-warning w-100" onclick="showSection('monthlyBillSection')">💳 Monthly Bill</button>
@@ -21,12 +22,13 @@
     </div>
 </div>
 
-<!-- Register Meter Section -->
+<!-- Register Meter for accounts -->
 <!-- This part is for register and the form. -->
-<div id="registerSection" class="form-section mt-4" style="display:none;">
-    <h2 class="mb-4">📝 Register New Meter</h2>
+<div id="registerSection" class="form-section mt-3" style="display:none;" >
+<!-- <div id="registerSection" class="form-section mt-5" style="display:none;"></div> -->
+    <h4 class="mb-4">📝 Register A New Meter</h4>
     <form id="registerForm">
-        <div class="mb-3">
+        <div class="mb-4">
 <!-- 
 - 'placeholder' is the words and notes that we want to show to users by default. 
 - 'Required' means that this information is required.
@@ -36,7 +38,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
                     pattern="\d{3}-\d{3}-\d{3}"
                     id="meter_id" required>
         </div>
-        <div class="row g-3 mb-3">
+        <div class="row g-4 mb-4">
             <div class="col-md-6">
                 <input type="text" class="form-control" 
                         placeholder="Region" id="region" required>
@@ -46,7 +48,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
                         placeholder="Area" id="area" required>
             </div>
         </div>
-        <div class="mb-3">
+        <div class="mb-4">
             <input type="text" class="form-control" 
                     placeholder="Dwelling Type" id="dwelling_type" required>
         </div>
@@ -56,8 +58,8 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
 </div>
 
 <!-- Submit Meter Reading Section -->
-<div id="meterReadingSection" class="form-section mt-4" style="display:none;">
-    <h2 class="mb-4">⚡ Submit Meter Reading</h2>
+<div id="meterReadingSection" class="form-section mt-3" style="display:none;">
+    <h4 class="mb-4">⚡ Submit Meter Reading</h4>
     <form id="readingForm">
         <div class="mb-3">
             <input type="text" class="form-control" 
@@ -70,11 +72,11 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
                         id="date" required>
             </div>
 <!-- For this part:
- We want it to be more user-friendly, which can help users find the nearby half an hour. -->
+ We want it to be more user-friendly, which can help users find the nearby half an hour. 
+ This part is hard for us, I use chatgpt to help us to do it.-->
             <script>
                 document.addEventListener("DOMContentLoaded", function () {
                     const dateInput = document.getElementById("date");
-                
                     function getCurrentDate() {
                         let today = new Date();
                         let year = today.getFullYear();
@@ -119,25 +121,27 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
     <div id="readingMessage" class="mt-3"></div>
 </div>
 
+<!-- The Daily Usage Query and Monthly Bill Query part are almost the same in front end. -->
 <!-- Daily Usage Query -->
-<div id="dailyUsageSection" class="form-section mt-4" style="display:none;">
-    <h2 class="mb-4">📊 Daily Usage Query</h2>
+<div id="dailyUsageSection" class="form-section mt-3" style="display:none;">
+    <h4 class="mb-4">📊 Daily Usage Query</h4>
     <div class="input-group mb-3">
-        <input type="text" class="form-control" 
-                placeholder="Meter ID (123-456-789)"
-                id="queryMeterId">
+        <input type="text" class="form-control" placeholder="Meter ID (123-456-789)" id="queryMeterId">
         <button class="btn btn-primary" onclick="queryUsage()">Query</button>
     </div>
-    <div id="usageResult"></div>
+    <div id="dailyUsageResult"></div>
 </div>
 
 <!-- Monthly Bill Query -->
-<div id="monthlyBillSection" class="form-section mt-4" style="display:none;">
-    <h2 class="mb-4">💳 Monthly Bill Query</h2>
-    <input type="text" class="form-control mb-3" placeholder="Meter ID (123-456-789)" id="queryBillMeterId">
-    <button class="btn btn-warning w-100" onclick="queryMonthlyBill()">Query</button>
-    <div id="billResult" class="mt-3"></div>
+<div id="monthlyBillSection" class="form-section mt-3" style="display:none;">
+    <h4 class="mb-4">💳 Monthly Bill Query</h4>
+    <div class="input-group mb-3">
+    <input type="text" class="form-control" placeholder="Meter ID (123-456-789)" id="queryBillMeterId">
+    <button class="btn btn-primary" onclick="queryMonthlyBill()">Query</button>
+    </div> 
+    <div id="billResult"></div>
 </div>
+
 
 <script>
 function showSection(sectionId) {
@@ -189,7 +193,8 @@ try {
     }
 });
 
-// Submit Meter Reading Manually
+// Submit Meter Reading Manually, this part is supposed to be done by IoT sensors 
+// and we are simulating this process.
 $('#readingForm').submit(async function(e) {
     e.preventDefault();
     const formData = new FormData();
@@ -214,7 +219,7 @@ $('#readingForm').submit(async function(e) {
             showMessage('#readingMessage', 'danger', result.error);
         }
     } catch (error) {
-        showMessage('#readingMessage', 'danger', 'Submission failed, please try again later');
+        showMessage('#readingMessage', 'danger', 'The reading submission failed, please try again later');
     }
 })
 });
@@ -223,17 +228,17 @@ $('#readingForm').submit(async function(e) {
 async function queryUsage() {
     const meterId = $('#queryMeterId').val();
     if (!meterId.match(/^\d{3}-\d{3}-\d{3}$/)) {
-        return showMessage('#usageResult', 'danger', 'Please enter a valid Meter ID (123-456-789)');
+        return showMessage('#dailyUsageResult', 'danger', 'Please enter a valid Meter ID (123-456-789)');
     }
 
     try {
         const response = await fetch(`/meters/${meterId}/daily/latest`);
         if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
+            throw new Error(`Error Code ${response.status}: ${response.statusText}`);
         }
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-            throw new Error("Invalid response from server (not JSON)");
+            throw new Error("Wrong response from server, please check if JSON format)");
         }
         const data = await response.json();
 
@@ -248,7 +253,7 @@ async function queryUsage() {
                 </table>
             </div>
         `;
-        $('#usageResult').html(html);
+        $('#dailyUsageResult').html(html);
         history.pushState({}, "", `/meters/${meterId}/daily/latest`);
         // Need to check if we need region and area here. Change me 
         // const html = `
@@ -262,15 +267,15 @@ async function queryUsage() {
         //         </table>
         //     </div>
         // `;
-        // $('#usageResult').html(html);
+        // $('#dailyUsageResult').html(html);
         // history.pushState({}, "", `/meter/daily/${meterId}`);
 
     } catch (error) {
-        showMessage('#usageResult', 'danger', error.message);
+        showMessage('#dailyUsageResult', 'danger', error.message);
     }
 }
 
-// Monthly Billing
+// Monthly Billing, which is almost the same as daily usage part. 
 async function queryMonthlyBill() {
     const meterId = $('#queryBillMeterId').val();
     if (!meterId.match(/^\d{3}-\d{3}-\d{3}$/)) {
@@ -284,7 +289,7 @@ async function queryMonthlyBill() {
         }
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-            throw new Error("Invalid response from server (not JSON)");
+            throw new Error("Wrong response from server, please check if JSON format)");
         }
         const data = await response.json();
 
@@ -303,12 +308,12 @@ async function queryMonthlyBill() {
         history.pushState({}, "", `/meters/${meterId}/monthly/latest`);
 
     } catch (error) {
-        showMessage('#usageResult', 'danger', error.message);
+        showMessage('#dailyUsageResult', 'danger', error.message);
     }
 }
 
-// Stop Server 
-async function stopServer() {
+// Stop Server Part which include the batch jobs. 
+async function serverstop() {
         try {
             const response = await fetch('/stop_server', { method: 'POST' });
             const data = await response.json();
