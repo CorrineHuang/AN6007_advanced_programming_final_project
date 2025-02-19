@@ -1,4 +1,6 @@
 Flask
 pandas
-flasgger
+flasgger==0.9.7b2
 flask_cors
+flask[async]
+setuptools

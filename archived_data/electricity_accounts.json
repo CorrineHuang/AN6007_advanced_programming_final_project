@@ -1,20 +1,8 @@
 [
     {
         "meter_id": "999-999-999",
-        "area": "NTU",
-        "region": "Jurong",
-        "dwelling_type": "abc"
-    },
-    {
-        "meter_id": "999-999-993",
-        "area": "NTU",
-        "region": "Jurong",
-        "dwelling_type": "xyz"
-    },
-    {
-        "meter_id": "999-999-123",
-        "area": "sbw",
-        "region": "central",
-        "dwelling_type": "4-room"
+        "area": "Jurong",
+        "region": "West",
+        "dwelling_type": "aaa"
     }
 ]

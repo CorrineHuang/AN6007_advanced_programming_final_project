@@ -1,16 +1,11 @@
-# from datetime import datetime
 import os
-import re
-# import random
-import pandas as pd
-from flask import Flask, json, request, jsonify,render_template
+from flask import Flask, request, jsonify,render_template
 from http import HTTPStatus
-import json
 import csv
-import ast
+import time
 from models.electricity_account import ElectricityAccount
 from models.meter_reading import MeterReading
-from utils import save_to_half_hourly_csv, calculate_daily_usage, calculate_monthly_usage
+from utils import is_valid_meter_id, load_electricity_accounts_from_file, save_electricity_accounts_to_file, save_to_half_hourly_csv, calculate_daily_usage, calculate_monthly_usage
 from flasgger import Swagger
 from flask_cors import CORS
 
@@ -19,58 +14,29 @@ app.config['SWAGGER'] = {
     'title': 'AN6007 ADVANCED PROGRAMMING - Electricity Meter Service API'
 }
 swagger = Swagger(app)
-
 CORS(app)
-file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 
-# Load existing accounts
-def load_electricity_accounts_from_file():
-    """Load all meter accounts from file"""
-    if not os.path.exists(file_path):
-        with open(file_path, "w") as file:
-            json.dump([], file)
-        return []
-
-    try:
-        with open(file_path, "r") as file:
-            data = json.load(file)
-            return [ElectricityAccount.from_dict(account) for account in data]
-    except json.JSONDecodeError:
-        return []
-
-# Save a new meter to the file
-def save_electricity_accounts_to_file(electricity_account: ElectricityAccount):
-    """Save a new meter to the file"""
-    # Check if meter_id already exists
-    if electricity_account.meter_id in meter_list:
-        return False, "Meter ID already registered"
-
-    # Add new account and save all accounts
-    meter_accounts.append(electricity_account)
-
-    # Convert all accounts to dictionaries for JSON serialization
-    accounts_dict = [account.to_dict() for account in meter_accounts]
-
-    with open(file_path, 'w') as f:
-        json.dump(accounts_dict, f, indent=4)
-    return True, "Meter registered successfully"
-
-# Validate meter ID format (XXX-XXX-XXX, digits only)
-def is_valid_meter_id(meter_id):
-    return bool(re.fullmatch(r"\d{3}-\d{3}-\d{3}", meter_id))
-
-# Global list of meters
+# Globals for in-memory storage
 meter_accounts = load_electricity_accounts_from_file()
-meter_list = [i.meter_id for i in meter_accounts]
+meter_list = [i.meter_id for i in meter_accounts] # known meter Ids
 meter_readings = {}
 
-# --- FRONTEND MAIN PAGE ---
+# Global for server online status
+acceptAPI = True
+
+
+#####################
+# Frontend Route
+#####################
 @app.route("/", methods=["GET"])
 def main():
     return render_template("function.html")
-# --- BACKEND ROUTES ---
+
+
+#####################
+# Backend Internal API
+#####################
 # API 1: Register
-# expect input:meter id,region,area,dwelling type
 @app.route('/register', methods=['POST'])
 def register():
     """
@@ -113,6 +79,9 @@ def register():
       409:
         description: Conflict. This meter is already registered.
     """
+    if not acceptAPI:
+        return jsonify({"message": f"The server is temporarily offline for maintenance."}), HTTPStatus.SERVICE_UNAVAILABLE
+    
     data = request.get_json()
     meter_id = data.get("meter_id")
 
@@ -122,7 +91,7 @@ def register():
     if not is_valid_meter_id(meter_id):
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), HTTPStatus.BAD_REQUEST
 
-    # Check if meter alreaday exists
+    # Check if meter already exists
     if meter_id in meter_list:
         return jsonify({
             "meter_id": meter_id,
@@ -145,18 +114,28 @@ def register():
         dwelling_type=dwelling_type
     )
 
-    success, message = save_electricity_accounts_to_file(new_account)
-    #meter_list.append(electricity_account.meter_id)
+    success, message = save_electricity_accounts_to_file(new_account, meter_list=meter_list, meter_accounts=meter_accounts)
     if not success:
         return jsonify({"message": message}), HTTPStatus.BAD_REQUEST
+    
+    meter_list.append(meter_id)
+
+    # # Ensure the daily_usage.csv file exists with the appropriate header.
+    # daily_usage_path = os.path.join(os.getcwd(), 'archived_data', 'daily_usage.csv')
+    # if not os.path.exists(daily_usage_path):
+    #     with open(daily_usage_path, 'w', newline='') as file:
+    #         writer = csv.writer(file)
+    #         # Write header as expected by get_daily_meter_usage.
+    #         writer.writerow(["meter_id", "region", "area", "date", "time", "usage"])
 
     return jsonify({
         "meter_id": meter_id,
         "message": "Meter registered successfully!"
     }), HTTPStatus.CREATED
 
+
 # API 2: Get meter reading data from IoT meters
-@app.route('/meter-reading', methods=['POST'])
+@app.route('/meter-readings', methods=['POST'])
 async def meter_reading():
     """
     Post electricity reading of a single meter to the server.
@@ -170,17 +149,17 @@ async def meter_reading():
         in: formData
         type: string
         required: true
-        description: Meter ID in the format XXX-XXX-XXX (numbers only).
+        description: Meter ID in the format 123-456-789 (digits only).
       - name: date
         in: formData
         type: string
         required: true
-        description: Date of the reading in DD-MM-YYYY format (e.g., 28-01-2020).
+        description: Date of the reading in YYYY-MM-DD format (e.g., 2020-01-28).
       - name: time
         in: formData
         type: string
         required: true
-        description: Time of the reading in HH:MM:SS format (e.g., 14:30:11).
+        description: Time of the reading in HH:MM format (e.g., 14:30).
       - name: electricity_reading
         in: formData
         type: string
@@ -196,7 +175,7 @@ async def meter_reading():
               properties:
                 message:
                   type: string
-                  example: Reading saved successfully
+                  example: "Reading saved successfully"
                 data:
                   type: object
                   description: Contains the meter reading details.
@@ -219,7 +198,17 @@ async def meter_reading():
               properties:
                 error:
                   type: string
-                  example: "Meter does not exist!"
+                  example: "Meter does not exist! Please register first."
+      503:
+        description: Service Unavailable. The server is temporarily offline for maintenance.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "The server is temporarily offline for maintenance."
       500:
         description: Internal Server Error.
         content:
@@ -231,6 +220,9 @@ async def meter_reading():
                   type: string
                   example: "Unexpected error occurred."
     """
+    if not acceptAPI:
+        return jsonify({"message": f"The server is temporarily offline for maintenance."}), HTTPStatus.SERVICE_UNAVAILABLE
+
     try:
         # Get form data
         meter_id = request.form.get('meter_id')
@@ -271,65 +263,161 @@ async def meter_reading():
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
       
-# API 3:Get last reading of daily
+# API 3: Get last daily reading for a specific meter Id
 @app.route('/meters/<meter_id>/daily/latest', methods=['GET'])
 def get_latest_daily_meter_usage(meter_id):
+    """
+    Get the latest daily meter usage reading.
+    ---
+    tags:
+      - Meter Readings
+    parameters:
+      - name: meter_id
+        in: path
+        type: string
+        required: true
+        description: Meter ID in the format 123-456-789 (digits only).
+    responses:
+      200:
+        description: The latest daily meter usage reading.
+        schema:
+          type: object
+          properties:
+            meter_id:
+              type: string
+              example: "123-456-789"
+            region:
+              type: string
+              example: "West"
+            area:
+              type: string
+              example: "Jurong"
+            date:
+              type: string
+              example: "2020-01-28"
+            usage:
+              type: string
+              example: "150"
+      404:
+        description: No readings found for the meter or file not found.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "No readings found for meter 123-456-789"
+      503:
+        description: Service Unavailable. The server is temporarily offline for maintenance.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "The server is temporarily offline for maintenance."
+      500:
+        description: Internal Server Error.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Error reading file: [error details]"
+    """
+    if not acceptAPI:
+        return jsonify({"message": f"The server is temporarily offline for maintenance."}), HTTPStatus.SERVICE_UNAVAILABLE
+
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
-            header = next(reader)  
-            last_reading = None
-
-            for row in reader:
-                if row[0] == meter_id:
-                    last_reading = row
-
-            if last_reading:
-                return jsonify({
-                    "meter_id": last_reading[0],
-                    "region":last_reading[1],
-                    "area": last_reading[2],
-                    "date": last_reading[3],
-                    "usage": last_reading[4]
-                }), 200
-            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
-
-    except FileNotFoundError:
-        return jsonify({"message": "Daily usage file not found"}), 404
-    except Exception as e:
-        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
-
-
-@app.route('/meters/<meter_id>/daily', methods=['GET'])
-def get_daily_readings(meter_id):
-    try:
-        with open('archived_data/daily_usage.csv', 'r', newline='') as file:
-            reader = csv.reader(file)
+            # Read header row
             header = next(reader)
             last_reading = None
-
             for row in reader:
+                # Skip any empty rows
+                if not row:
+                    continue
                 if row[0] == meter_id:
                     last_reading = row
 
             if last_reading:
                 return jsonify({
                     "meter_id": last_reading[0],
-                    "region":last_reading[1],
+                    "region": last_reading[1],
                     "area": last_reading[2],
-                    "date": last_reading[3],
-                    "usage": last_reading[4]
+                    "dwelling_type": last_reading[3],
+                    "date": last_reading[4],
+                    "usage": last_reading[5]
                 }), 200
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
 
     except FileNotFoundError:
         return jsonify({"message": "Daily usage file not found"}), 404
     except Exception as e:
-        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
-
-
+        return jsonify({"message": f"Error reading file: {str(e)}"}), HTTPStatus.INTERNAL_SERVER_ERROR
+  
+      
+# API 4: Get last monthly reading for a specific meter Id  
 @app.route('/meters/<meter_id>/monthly/latest', methods=['GET'])
 def get_latest_monthly_meter_usage(meter_id):
+    """
+    Get the latest monthly meter usage reading.
+    ---
+    tags:
+      - Meter Readings
+    parameters:
+      - name: meter_id
+        in: path
+        type: string
+        required: true
+        description: Meter ID in the format 123-456-789 (digits only).
+    responses:
+      200:
+        description: The latest monthly meter usage reading.
+        schema:
+          type: object
+          properties:
+            meter_id:
+              type: string
+              example: "123-456-789"
+            region:
+              type: string
+              example: "West"
+            area:
+              type: string
+              example: "Jurong"
+            date:
+              type: string
+              example: "2020-01-28"
+            usage:
+              type: string
+              example: "150"
+      404:
+        description: No readings found for the meter or file not found.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "No readings found for meter 123-456-789"
+      503:
+        description: Service Unavailable. The server is temporarily offline for maintenance.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "The server is temporarily offline for maintenance."
+      500:
+        description: Internal Server Error.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Error reading file: [error details]"
+    """
+    if not acceptAPI:
+        return jsonify({"message": f"The server is temporarily offline for maintenance."}), HTTPStatus.SERVICE_UNAVAILABLE
 
     try:
         with open('archived_data/monthly_usage.csv', 'r', newline='') as file:
@@ -346,8 +434,9 @@ def get_latest_monthly_meter_usage(meter_id):
                     "meter_id": last_reading[0],
                     "region":last_reading[1],
                     "area": last_reading[2],
-                    "date": last_reading[3],
-                    "usage": last_reading[4]
+                    "dwelling_type": last_reading[3],
+                    "date": last_reading[4],
+                    "usage": last_reading[5]
                 }), 200
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
 
@@ -355,50 +444,218 @@ def get_latest_monthly_meter_usage(meter_id):
         return jsonify({"message": "Monthly usage file not found"}), 404
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+
+
+# API 5: Stop the server and perform batch jobs for maintenance
+@app.route("/stop_server", methods=["POST"])
+def stop_server():
+    """
+    Stop the server for maintenance, clear memory and archive daily, monthly, and batch jobs.
+    ---
+    tags:
+      - Server Maintenance
+    responses:
+      200:
+        description: Server maintenance and archival tasks were completed successfully.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Server is shutting down. We are working on batch jobs. Good Night!"
+    """
+    global acceptAPI
+
+    acceptAPI = False
+    calculate_daily_usage(meter_accounts, meter_readings)
+    calculate_monthly_usage()
+    # time.sleep(5)
+    meter_readings.clear()
+    acceptAPI = True
+
+    return jsonify({"message": "Server is shutting down. We are working on batch jobs. Good Night!"}), 200
+
+
+#####################
+# External APIs to Monetize
+#####################
+# External API 1: Get all daily readings for all meters
+@app.route('/meters/daily', methods=['GET'])
+def get_daily_readings():
+    """
+    Get daily usage readings for all meters.
+    ---
+    tags:
+      - Meter Readings
+    responses:
+      200:
+        description: Daily readings retrieved successfully.
+        schema:
+          type: object
+          properties:
+            readings:
+              type: array
+              items:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    example: "West"
+                  area:
+                    type: string
+                    example: "Jurong"
+                  date:
+                    type: string
+                    example: "2020-01-28"
+                  usage:
+                    type: string
+                    example: "150"
+      404:
+        description: No readings found or the daily usage file is not available.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "No readings found."
+      503:
+        description: Service unavailable. The server is temporarily offline for maintenance.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "The server is temporarily offline for maintenance."
+      500:
+        description: Internal server error.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Error reading file: [error details]"
+    """
+    if not acceptAPI:
+        return jsonify({"message": f"The server is temporarily offline for maintenance."}), HTTPStatus.SERVICE_UNAVAILABLE
     
-@app.route('/meters/<meter_id>/monthly', methods=['GET'])
-def get_monthly_readings(meter_id):
     try:
-        with open('archived_data/monthly_usage.csv', 'r', newline='') as file:
+        with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
-            header = next(reader) 
             readings = []
 
             for row in reader:
-                if row[0] == meter_id:
-                    readings.append({
-                        "meter_id": row[0],
-                        "region": row[1],
-                        "area": row[2],
-                        "date": row[3],
-                        "usage": float(row[4])
-                    })
+                readings.append({
+                    "region":row[1],
+                    "area": row[2],
+                    "dwelling_type": row[3],
+                    "date": row[4],
+                    "usage": row[5]
+                }), 200
 
             if readings:
                 return jsonify({
-                    "meter_id": meter_id,
                     "readings": readings
                 }), 200
-            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
+            return jsonify({"message": f"No readings found."}), 404
+
+    except FileNotFoundError:
+        return jsonify({"message": "Daily usage file not found"}), 404
+    except Exception as e:
+        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+
+    
+# External API 2: Get all monthly readings for all meters
+@app.route('/meters/monthly', methods=['GET'])
+def get_monthly_readings():
+    """
+    Get monthly usage readings for all meters.
+    ---
+    tags:
+      - Meter Readings
+    responses:
+      200:
+        description: Monthly readings retrieved successfully.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                readings:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      region:
+                        type: string
+                        example: "West"
+                      area:
+                        type: string
+                        example: "Jurong"
+                      date:
+                        type: string
+                        example: "2020-01-28"
+                      usage:
+                        type: number
+                        example: 150.0
+      404:
+        description: No readings found or the monthly usage file is not available.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "No readings found."
+      503:
+        description: Service unavailable. The server is temporarily offline for maintenance.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "The server is temporarily offline for maintenance."
+      500:
+        description: Internal server error.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Error reading file: [error details]"
+    """
+    if not acceptAPI:
+        return jsonify({"message": f"The server is temporarily offline for maintenance."}), HTTPStatus.SERVICE_UNAVAILABLE
+    
+    try:
+        with open('archived_data/monthly_usage.csv', 'r', newline='') as file:
+            reader = csv.reader(file)
+            readings = []
+
+            for row in reader:
+                    readings.append({
+                      "region": row[1],
+                      "area": row[2],
+                      "dwelling_type": row[3],
+                      "date": row[4],
+                      "usage": float(row[5])
+                  })
+
+            if readings:
+                return jsonify({
+                    "readings": readings
+                }), 200
+            return jsonify({"message": f"No readings found."}), 404
 
     except FileNotFoundError:
         return jsonify({"message": "Monthly usage file not found"}), 404
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
       
-
-@app.route("/stop_server", methods=["POST"])
-def stop_server():
-    global acceptAPI
-
-    acceptAPI = False
-    calculate_daily_usage(meter_accounts, meter_readings)
-    calculate_monthly_usage()
-    meter_readings.clear()
-    acceptAPI = True
-
-    return jsonify({"message": "Server is shutting down. We are working on batch jobs. Good Night!"}), 200
-
 
 # Run the Flask app
 if __name__ == "__main__":

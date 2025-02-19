@@ -9,6 +9,26 @@
 - 🔍 Easy-to-use test interface with clickable buttons
 - 🎨 Pretty JSON responses for better readability
 
+## Installation Guide for Backend
+- Step 1: Run this code in the terminal
+
+```
+python3 -m pip install --upgrade pip
+```
+- Step 2: Run this in the terminal
+```
+pip install -r requirements.txt
+```
+- Step 3: Run this in terminal
+```
+python app.py
+```
+
+- Step 4: Make server public
+```
+Make the port public in order to use reqbin.
+```
+
 ## How to use the API
 
 1. Run `python app.py` to start the server. Take note of the server URL, e.g `http://127.0.0.1:5000`/. If you are using Codespaces, the URL will be whatever the URL of your Codespaces is in the browser - it ends with `...github.dev/`, and you can append the rest of the API to the end, e.g. `github.dev/register`
@@ -50,4 +70,4 @@ electricity_reading=1000
 2. Need to add the Shiny/Dash thing in the 'More Analysis" button.
 
 3. Do we need to add another API for monthly billing part?
-And for 'calculate monthly usage', we calculate for this month or last month? 
+And for 'calculate monthly usage', we calculate for this month or last month?
