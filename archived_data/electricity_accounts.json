@@ -34,5 +34,11 @@
         "area": "asd",
         "region": "asd",
         "dwelling_type": "asd"
+    },
+    {
+        "meter_id": "999-999-112",
+        "area": "asd",
+        "region": "sada",
+        "dwelling_type": "dsa"
     }
 ]
