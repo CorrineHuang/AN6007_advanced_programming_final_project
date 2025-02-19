@@ -199,7 +199,7 @@ $('#readingForm').submit(async function(e) {
     formData.append('electricity_reading', $('#electricity_reading').val());
 
     try {
-        const response = await fetch('/meter-reading', {
+        const response = await fetch('/meter-readings', {
             method: 'POST',
             body: formData
         });
@@ -209,7 +209,7 @@ $('#readingForm').submit(async function(e) {
             showMessage('#readingMessage', 'success', 
                 `${result.message}<br>Latest Reading: ${result.data.electricity_reading}kWh`);
             $('#readingForm')[0].reset();
-            history.pushState({}, "", "/meter-reading");
+            history.pushState({}, "", "/meter-readings");
         } else {
             showMessage('#readingMessage', 'danger', result.error);
         }

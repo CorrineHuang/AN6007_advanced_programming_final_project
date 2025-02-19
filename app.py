@@ -168,7 +168,7 @@ def register():
     }), HTTPStatus.CREATED
 
 # API 2: Get meter reading data from IoT meters
-@app.route('/meter-reading', methods=['POST'])
+@app.route('/meter-readings', methods=['POST'])
 async def meter_reading():
     """
     Post electricity reading of a single meter to the server.
@@ -311,9 +311,9 @@ def get_latest_daily_meter_usage(meter_id):
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
 
     except FileNotFoundError:
-        return jsonify({"message": "Daily usage file not found"}), HTTPStatus.NOT_FOUND
+        return jsonify({"message": "Daily usage file not found"}), 404
     except Exception as e:
-        return jsonify({"message": f"Error reading file: {str(e)}"}), HTTPStatus.INTERNAL_SERVER_ERROR
+        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
 
 
 @app.route('/meters/daily', methods=['GET'])
