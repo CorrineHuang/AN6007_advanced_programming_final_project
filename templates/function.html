@@ -254,7 +254,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
       formData.append("electricity_reading", $("#electricity_reading").val());
 
       try {
-        const response = await fetch("/meter-reading", {
+        const response = await fetch("/meter-readings", {
           method: "POST",
           body: formData,
         });
@@ -267,7 +267,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
             `${result.message}<br>Latest Reading: ${result.data.electricity_reading}kWh`
           );
           $("#readingForm")[0].reset();
-          history.pushState({}, "", "/meter-reading");
+          history.pushState({}, "", "/meter-readings");
         } else {
           showMessage("#readingMessage", "danger", result.error);
         }
@@ -319,6 +319,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
           <table class="table">
               <tr><th>Region</th><td>${data.region}</td></tr>
               <tr><th>Area</th><td>${data.area}</td></tr>
+              <tr><th>Dwelling_type</th><td>${data.dwelling_type}</td></tr>
               <tr><th>Last Reading Day</th><td>${data.date}</td></tr>
               <tr><th>Daily Usage</th><td>${data.usage} kWh</td></tr>
           </table>
@@ -373,6 +374,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
           <table class="table">
               <tr><th>Region</th><td>${data.region}</td></tr>
               <tr><th>Area</th><td>${data.area}</td></tr>
+              <tr><th>Dwelling_type</th><td>${data.dwelling_type}</td></tr>
               <tr><th>Last Reading Month</th><td>${data.date}</td></tr>
               <tr><th>Monthly Usage</th><td>${data.usage} kWh</td></tr>
           </table>
