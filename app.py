@@ -1,6 +1,7 @@
 # from datetime import datetime
 import os
 import re
+
 # import random
 import pandas as pd
 from flask import Flask, json, request, jsonify,render_template
@@ -68,6 +69,7 @@ meter_readings = {}
 @app.route("/", methods=["GET"])
 def main():
     return render_template("function.html")
+
 # --- BACKEND ROUTES ---
 # API 1: Register
 # expect input:meter id,region,area,dwelling type
@@ -146,11 +148,19 @@ def register():
     )
 
     success, message = save_electricity_accounts_to_file(new_account)
-
+    #meter_list.append(electricity_account.meter_id)
     if not success:
         return jsonify({"message": message}), HTTPStatus.BAD_REQUEST
     
     meter_list.append(meter_id)
+
+    # Ensure the daily_usage.csv file exists with the appropriate header.
+    daily_usage_path = os.path.join(os.getcwd(), 'archived_data', 'daily_usage.csv')
+    if not os.path.exists(daily_usage_path):
+        with open(daily_usage_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            # Write header as expected by get_daily_meter_usage.
+            writer.writerow(["meter_id", "region", "area", "date", "time", "usage"])
 
     return jsonify({
         "meter_id": meter_id,
@@ -203,7 +213,7 @@ async def meter_reading():
                   type: object
                   description: Contains the meter reading details.
       400:
-        description: Bad Request due to invalid input values.
+        description: Bad Request due to invalid input values. 
         content:
           application/json:
             schema:
@@ -279,17 +289,21 @@ def get_latest_daily_meter_usage(meter_id):
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
-            header = next(reader)  
+            # Read header row
+            header = next(reader)
             last_reading = None
 
             for row in reader:
+                # Skip any empty rows or rows with insufficient data
+                if not row or len(row) < 6:
+                    continue
                 if row[0] == meter_id:
                     last_reading = row
 
             if last_reading:
                 return jsonify({
                     "meter_id": last_reading[0],
-                    "region":last_reading[1],
+                    "region": last_reading[1],
                     "area": last_reading[2],
                     "date": last_reading[3],
                     "usage": last_reading[4]
@@ -297,32 +311,32 @@ def get_latest_daily_meter_usage(meter_id):
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
 
     except FileNotFoundError:
-        return jsonify({"message": "Daily usage file not found"}), 404
+        return jsonify({"message": "Daily usage file not found"}), HTTPStatus.NOT_FOUND
     except Exception as e:
-        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+        return jsonify({"message": f"Error reading file: {str(e)}"}), HTTPStatus.INTERNAL_SERVER_ERROR
 
 
-@app.route('/meters/<meter_id>/daily', methods=['GET'])
-def get_daily_readings(meter_id):
+@app.route('/meters/daily', methods=['GET'])
+def get_daily_readings():
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
             header = next(reader)
-            last_reading = None
+            readings = []
 
             for row in reader:
-                if row[0] == meter_id:
-                    last_reading = row
-
-            if last_reading:
-                return jsonify({
-                    "meter_id": last_reading[0],
-                    "region":last_reading[1],
-                    "area": last_reading[2],
-                    "date": last_reading[3],
-                    "usage": last_reading[4]
+                readings.append({
+                    "region":row[1],
+                    "area": row[2],
+                    "date": row[3],
+                    "usage": row[4]
                 }), 200
-            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
+
+            if readings:
+                return jsonify({
+                    "readings": readings
+                }), 200
+            return jsonify({"message": f"No readings found."}), 404
 
     except FileNotFoundError:
         return jsonify({"message": "Daily usage file not found"}), 404
@@ -358,8 +372,8 @@ def get_latest_monthly_meter_usage(meter_id):
     except Exception as e:
         return jsonify({"message": f"Error reading file: {str(e)}"}), 500
     
-@app.route('/meters/<meter_id>/monthly', methods=['GET'])
-def get_monthly_readings(meter_id):
+@app.route('/meters/monthly', methods=['GET'])
+def get_monthly_readings():
     try:
         with open('archived_data/monthly_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
@@ -367,21 +381,18 @@ def get_monthly_readings(meter_id):
             readings = []
 
             for row in reader:
-                if row[0] == meter_id:
                     readings.append({
-                        "meter_id": row[0],
-                        "region": row[1],
-                        "area": row[2],
-                        "date": row[3],
-                        "usage": float(row[4])
-                    })
+                      "region": row[1],
+                      "area": row[2],
+                      "date": row[3],
+                      "usage": float(row[4])
+                  })
 
             if readings:
                 return jsonify({
-                    "meter_id": meter_id,
                     "readings": readings
                 }), 200
-            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
+            return jsonify({"message": f"No readings found."}), 404
 
     except FileNotFoundError:
         return jsonify({"message": "Monthly usage file not found"}), 404
@@ -391,6 +402,21 @@ def get_monthly_readings(meter_id):
 
 @app.route("/stop_server", methods=["POST"])
 def stop_server():
+    """
+    Stop the server for maintenance and archive daily, monthly, and batch jobs.
+    ---
+    tags:
+      - Server Maintenance
+    responses:
+      200:
+        description: Server maintenance and archival tasks were completed successfully.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Server is under maintenance."
+    """
     global acceptAPI
 
     acceptAPI = False
@@ -399,7 +425,7 @@ def stop_server():
     meter_readings.clear()
     acceptAPI = True
 
-    return jsonify({"message": "Server is shutting down."}), 200
+    return jsonify({"message": "Server is shutting down. We are working on batch jobs. Good Night!"}), 200
 
 
 # Run the Flask app
