@@ -3,11 +3,56 @@ import csv
 import pandas as pd
 from datetime import datetime
 import pytz
+import json
+import re
+
+from models.electricity_account import ElectricityAccount
 
 
+file_path = os.path.join(os.getcwd(), 'archived_data', 'electricity_accounts.json')
 half_hourly_readings_csv_filepath = 'archived_data/half_hourly_readings.csv'
 daily_file = "archived_data/daily_usage.csv"
 monthly_file = "archived_data/monthly_usage.csv"
+
+
+# Load existing accounts
+def load_electricity_accounts_from_file():
+    """Load all meter accounts from file"""
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as file:
+            json.dump([], file)
+        return []
+
+    try:
+        with open(file_path, "r") as file:
+            data = json.load(file)
+            return [ElectricityAccount.from_dict(account) for account in data]
+    except json.JSONDecodeError:
+        return []
+
+
+# Save a new meter to the file
+def save_electricity_accounts_to_file(electricity_account: ElectricityAccount, meter_list, meter_accounts):
+    """Save a new meter to the file"""
+    # Check if meter_id already exists
+    if electricity_account.meter_id in meter_list:
+        return False, "Meter ID already registered"
+
+    # Add new account and save all accounts
+    meter_accounts.append(electricity_account)
+
+    # Convert all accounts to dictionaries for JSON serialization
+    accounts_dict = [account.to_dict() for account in meter_accounts]
+
+    with open(file_path, 'w') as f:
+        json.dump(accounts_dict, f, indent=4)
+    return True, "Meter registered successfully"
+
+
+# Validate meter ID format (XXX-XXX-XXX, digits only)
+def is_valid_meter_id(meter_id):
+    return bool(re.fullmatch(r"\d{3}-\d{3}-\d{3}", meter_id))
+
 
 async def save_to_half_hourly_csv(data):
     file_exists = os.path.exists(half_hourly_readings_csv_filepath)
@@ -27,12 +72,6 @@ async def save_to_half_hourly_csv(data):
     except IOError as e:
         print(f"Error writing to file: {e}")
         raise
-
-
-
-import csv
-import os
-import pandas as pd
 
 def calculate_daily_usage(meter_accounts, meter_readings):
     """Calculate daily electricity usage and save to CSV."""
