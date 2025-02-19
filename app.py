@@ -66,13 +66,8 @@ meter_readings = {}
 @app.route("/", methods=["GET"])
 def main():
     return render_template("function.html")
-# --- BACKEND ROUTES ---
-# API 1: Register
-# expect input:
-# meter id
-# region
-# area
-# dwelling type
+
+# --- BACKEND ---
 @app.route('/register', methods=['POST'])
 def register():
     """
@@ -124,7 +119,7 @@ def register():
     if not is_valid_meter_id(meter_id):
         return jsonify({"message": "Invalid format. Use format XXX-XXX-XXX (digits only)."}), HTTPStatus.BAD_REQUEST
 
-    # Check if meter alreaday exists
+    # Check if meter already exists
     existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
     if existing_meter:
         return jsonify({
@@ -152,6 +147,14 @@ def register():
 
     if not success:
         return jsonify({"message": message}), HTTPStatus.BAD_REQUEST
+
+    # Ensure the daily_usage.csv file exists with the appropriate header.
+    daily_usage_path = os.path.join(os.getcwd(), 'archived_data', 'daily_usage.csv')
+    if not os.path.exists(daily_usage_path):
+        with open(daily_usage_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            # Write header as expected by get_daily_meter_usage.
+            writer.writerow(["meter_id", "region", "area", "date", "time", "usage"])
 
     return jsonify({
         "meter_id": meter_id,
@@ -204,7 +207,7 @@ async def meter_reading():
                   type: object
                   description: Contains the meter reading details.
       400:
-        description: Bad Request due to invalid input values.
+        description: Bad Request due to invalid input values. 
         content:
           application/json:
             schema:
@@ -273,10 +276,68 @@ async def meter_reading():
 
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
 # API 3:Get last reading of today
 @app.route('/meter/daily/<meter_id>', methods=['GET'])
 def get_daily_meter_usage(meter_id):
-    print(meters)
+    """
+    Fetch the daily electricity usage for a specified meter.
+    @Weiqiang: Logically it is yesterday, cuz the function is to get the latest record of this id, and this data will only appear when we run the stop sever (assumed to be tmr 0 am -1am)
+    ---
+    tags:
+      - Meter Readings
+    parameters:
+      - name: meter_id
+        in: path
+        description: Meter ID in the format XXX-XXX-XXX.
+        required: true
+        type: string
+    responses:
+      200:
+        description: Daily meter reading found.
+        schema:
+          type: object
+          properties:
+            meter_id:
+              type: string
+              example: "123-456-789"
+            region:
+              type: string
+              example: "SomeRegion"
+            area:
+              type: string
+              example: "SomeArea"
+            date:
+              type: string
+              example: "28-01-2020"
+            time:
+              type: string
+              example: "14:30:00"
+            usage:
+              type: string
+              example: "15.2"
+      404:
+        description: |
+          Returned in the following cases:
+          - Meter does not exist: "Meter {meter_id} not found"
+          - No readings found for the meter: "No readings found for meter {meter_id}"
+          - Daily usage file is missing: "Daily usage file not found"
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Meter 123-456-789 not found"
+      500:
+        description: Internal server error.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Error reading file: [error details]"
+    """
+    # Verify that the meter exists in our collection.
     existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
     if existing_meter is None:
         return jsonify({"message": f"Meter {meter_id} not found"}), HTTPStatus.NOT_FOUND
@@ -284,40 +345,60 @@ def get_daily_meter_usage(meter_id):
     try:
         with open('archived_data/daily_usage.csv', 'r', newline='') as file:
             reader = csv.reader(file)
-            header = next(reader)  
+            # Read header row
+            header = next(reader)
             last_reading = None
 
             for row in reader:
+                # Skip any empty rows or rows with insufficient data
+                if not row or len(row) < 6:
+                    continue
                 if row[0] == meter_id:
                     last_reading = row
 
             if last_reading:
                 return jsonify({
                     "meter_id": last_reading[0],
-                    "region":last_reading[1],
+                    "region": last_reading[1],
                     "area": last_reading[2],
                     "date": last_reading[3],
                     "time": last_reading[4],
                     "usage": last_reading[5]
-                }), 200
-            return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
+                }), HTTPStatus.OK
+
+            return jsonify({"message": f"No readings found for meter {meter_id}"}), HTTPStatus.NOT_FOUND
 
     except FileNotFoundError:
-        return jsonify({"message": "Daily usage file not found"}), 404
+        return jsonify({"message": "Daily usage file not found"}), HTTPStatus.NOT_FOUND
     except Exception as e:
-        return jsonify({"message": f"Error reading file: {str(e)}"}), 500
+        return jsonify({"message": f"Error reading file: {str(e)}"}), HTTPStatus.INTERNAL_SERVER_ERROR
 
 # API 4: stop server for maintenance and archive for daily,monthly, batch jobs
 @app.route("/stop_server", methods=["POST"])
 def stop_server():
+    """
+    Stop the server for maintenance and archive daily, monthly, and batch jobs.
+    ---
+    tags:
+      - Server Maintenance
+    responses:
+      200:
+        description: Server maintenance and archival tasks were completed successfully.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Server is under maintenance."
+    """
     global acceptAPI
 
     acceptAPI = False
     calculate_daily_usage(meters, meter_readings)
-    calculate_monthly_usage(meters, meter_readings)
+    calculate_monthly_usage(meters)
     acceptAPI = True
 
-    return jsonify({"message": "Server is under maintenance."}), 200
+    return jsonify({"message": "Server is under maintenance."}), HTTPStatus.ACCEPTED
 
 
 # This randomly generates meter readings - WE DO NOT WANT THIS ANYMORE
