@@ -281,74 +281,6 @@ async def meter_reading():
 
     except Exception as e:
         return {"error": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
-<<<<<<< HEAD
-
-# API 3:Get last reading of today
-@app.route('/meter/daily/<meter_id>', methods=['GET'])
-def get_daily_meter_usage(meter_id):
-    """
-    Fetch the daily electricity usage for a specified meter.
-    @Weiqiang: Logically it is yesterday, cuz the function is to get the latest record of this id, and this data will only appear when we run the stop sever (assumed to be tmr 0 am -1am)
-    ---
-    tags:
-      - Meter Readings
-    parameters:
-      - name: meter_id
-        in: path
-        description: Meter ID in the format XXX-XXX-XXX.
-        required: true
-        type: string
-    responses:
-      200:
-        description: Daily meter reading found.
-        schema:
-          type: object
-          properties:
-            meter_id:
-              type: string
-              example: "123-456-789"
-            region:
-              type: string
-              example: "SomeRegion"
-            area:
-              type: string
-              example: "SomeArea"
-            date:
-              type: string
-              example: "28-01-2020"
-            time:
-              type: string
-              example: "14:30:00"
-            usage:
-              type: string
-              example: "15.2"
-      404:
-        description: |
-          Returned in the following cases:
-          - Meter does not exist: "Meter {meter_id} not found"
-          - No readings found for the meter: "No readings found for meter {meter_id}"
-          - Daily usage file is missing: "Daily usage file not found"
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-              example: "Meter 123-456-789 not found"
-      500:
-        description: Internal server error.
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-              example: "Error reading file: [error details]"
-    """
-    # Verify that the meter exists in our collection.
-    existing_meter = next((meter for meter in meters if meter.meter_id == meter_id), None)
-    if existing_meter is None:
-        return jsonify({"message": f"Meter {meter_id} not found"}), HTTPStatus.NOT_FOUND
-=======
->>>>>>> 2a6cab637166e00ced4d98d0706af487657684b3
 
       
 # API 3:Get last reading of daily
@@ -374,17 +306,9 @@ def get_latest_daily_meter_usage(meter_id):
                     "region": last_reading[1],
                     "area": last_reading[2],
                     "date": last_reading[3],
-<<<<<<< HEAD
-                    "time": last_reading[4],
-                    "usage": last_reading[5]
-                }), HTTPStatus.OK
-
-            return jsonify({"message": f"No readings found for meter {meter_id}"}), HTTPStatus.NOT_FOUND
-=======
                     "usage": last_reading[4]
                 }), 200
             return jsonify({"message": f"No readings found for meter {meter_id}"}), 404
->>>>>>> 2a6cab637166e00ced4d98d0706af487657684b3
 
     except FileNotFoundError:
         return jsonify({"message": "Daily usage file not found"}), HTTPStatus.NOT_FOUND
@@ -496,20 +420,12 @@ def stop_server():
     global acceptAPI
 
     acceptAPI = False
-<<<<<<< HEAD
-    calculate_daily_usage(meters, meter_readings)
-    calculate_monthly_usage(meters)
-    acceptAPI = True
-
-    return jsonify({"message": "Server is under maintenance."}), HTTPStatus.ACCEPTED
-=======
     calculate_daily_usage(meter_accounts, meter_readings)
     calculate_monthly_usage()
     meter_readings.clear()
     acceptAPI = True
 
     return jsonify({"message": "Server is shutting down. We are working on batch jobs. Good Night!"}), 200
->>>>>>> 2a6cab637166e00ced4d98d0706af487657684b3
 
 
 # Run the Flask app
