@@ -1,44 +1,14 @@
 [
     {
         "meter_id": "999-999-999",
+        "area": "Jurong",
+        "region": "West",
+        "dwelling_type": "aaa"
+    },
+    {
+        "meter_id": "666-777-866",
         "area": "NTU",
         "region": "Jurong",
-        "dwelling_type": "abc"
-    },
-    {
-        "meter_id": "999-999-993",
-        "area": "NTU",
-        "region": "Jurong",
-        "dwelling_type": "xyz"
-    },
-    {
-        "meter_id": "999-999-123",
-        "area": "sbw",
-        "region": "central",
-        "dwelling_type": "4-room"
-    },
-    {
-        "meter_id": "999-999-111",
-        "area": "asd",
-        "region": "asd",
-        "dwelling_type": "asd"
-    },
-    {
-        "meter_id": "999-999-001",
-        "area": "cds",
-        "region": "asd",
-        "dwelling_type": "asd"
-    },
-    {
-        "meter_id": "999-999-115",
-        "area": "asd",
-        "region": "asd",
-        "dwelling_type": "asd"
-    },
-    {
-        "meter_id": "999-999-112",
-        "area": "asd",
-        "region": "sada",
-        "dwelling_type": "dsa"
+        "dwelling_type": "x"
     }
 ]

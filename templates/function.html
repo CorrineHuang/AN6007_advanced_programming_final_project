@@ -1,5 +1,6 @@
+<!-- Thankful to Open Source Github website Code: https://github.com/StartBootstrap/startbootstrap-modern-business  -->
 {% extends "menu.html" %}
-<!-- This part is for our main functions. -->
+<!-- This part is for our main buttons and functions, connnected with APIs-->
 {% block content %}
 <!-- First, we create 4 main buttons. -->
 <div class="container text-center">
@@ -41,7 +42,7 @@
   </div>
 </div>
 
-<!-- Register Meter Section -->
+<!-- Register Meter for accounts -->
 <!-- This part is for register and the form. -->
 <div id="registerSection" class="form-section mt-4" style="display: none">
   <h2 class="mb-4">📝 Register New Meter</h2>
@@ -164,6 +165,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
   <div id="readingMessage" class="mt-3"></div>
 </div>
 
+<!-- The Daily Usage Query and Monthly Bill Query part are almost the same in front end. -->
 <!-- Daily Usage Query -->
 <div id="dailyUsageSection" class="form-section mt-4" style="display: none">
   <h2 class="mb-4">📊 Daily Usage Query</h2>
@@ -193,6 +195,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
   </button>
   <div id="billResult" class="mt-3"></div>
 </div>
+
 
 <script>
   function showSection(sectionId) {
@@ -244,7 +247,8 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
       }
     });
 
-    // Submit Meter Reading Manually
+    // Submit Meter Reading Manually, this part is supposed to be done by IoT sensors 
+// and we are simulating this process.
     $("#readingForm").submit(async function (e) {
       e.preventDefault();
       const formData = new FormData();
@@ -254,7 +258,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
       formData.append("electricity_reading", $("#electricity_reading").val());
 
       try {
-        const response = await fetch("/meter-reading", {
+        const response = await fetch("/meter-readings", {
           method: "POST",
           body: formData,
         });
@@ -267,7 +271,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
             `${result.message}<br>Latest Reading: ${result.data.electricity_reading}kWh`
           );
           $("#readingForm")[0].reset();
-          history.pushState({}, "", "/meter-reading");
+          history.pushState({}, "", "/meter-readings");
         } else {
           showMessage("#readingMessage", "danger", result.error);
         }
@@ -319,6 +323,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
           <table class="table">
               <tr><th>Region</th><td>${data.region}</td></tr>
               <tr><th>Area</th><td>${data.area}</td></tr>
+              <tr><th>Dwelling_type</th><td>${data.dwelling_type}</td></tr>
               <tr><th>Last Reading Day</th><td>${data.date}</td></tr>
               <tr><th>Daily Usage</th><td>${data.usage} kWh</td></tr>
           </table>
@@ -373,6 +378,7 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
           <table class="table">
               <tr><th>Region</th><td>${data.region}</td></tr>
               <tr><th>Area</th><td>${data.area}</td></tr>
+              <tr><th>Dwelling_type</th><td>${data.dwelling_type}</td></tr>
               <tr><th>Last Reading Month</th><td>${data.date}</td></tr>
               <tr><th>Monthly Usage</th><td>${data.usage} kWh</td></tr>
           </table>
@@ -386,8 +392,8 @@ Notes: it's better to change this part to dropdown list, which is more user-frie
     }
   }
 
-  // Stop Server
-  async function stopServer() {
+  // Stop ServerPart which include the batch jobs. 
+  async function serverstop() {
     try {
       const response = await fetch("/stop_server", { method: "POST" });
       const data = await response.json();

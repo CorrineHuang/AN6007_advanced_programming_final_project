@@ -1,9 +1,3 @@
-Meter_id,Region,Area,Date,Daily_Usage (kWh)
-999-999-999,Jurong,NTU,28-01-2020,4.0
-999-999-999,Jurong,NTU,28-01-2025,4.0
-999-999-999,Jurong,NTU,20-02-2025,7.0
-999-999-999,Jurong,NTU,21-02-2025,4.0
-999-999-993,Jurong,NTU,21-02-2025,2.0
-999-999-993,Jurong,NTU,22-02-2025,2.0
-999-999-999,Jurong,NTU,22-01-2025,0.0
-999-999-999,Jurong,NTU,23-01-2025,0.0
+Meter_id,Region,Area,Dwelling_type,Date,Daily_Usage (kWh)
+999-999-999,West,Jurong,aaa,2025-02-18,4.0
+999-999-999,West,Jurong,aaa,2025-02-19,5.0

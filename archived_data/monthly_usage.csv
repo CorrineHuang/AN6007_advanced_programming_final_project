@@ -1,4 +1,2 @@
-Meter_id,Region,Area,Month,Monthly_Usage (kWh)
-999-999-999,Jurong,NTU,2025-Jan,8.0
-999-999-999,Jurong,NTU,2025-Feb,11.0
-999-999-993,Jurong,NTU,2025-Feb,4.0
+Meter_id,Region,Area,Dwelling_type,Month,Monthly_Usage (kWh)
+999-999-999,West,Jurong,aaa,2025-Feb,9.0

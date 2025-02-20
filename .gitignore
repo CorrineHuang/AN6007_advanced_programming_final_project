@@ -170,6 +170,6 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-archived_data/daily_usage.csv
-archived_data/half_hourly_readings.csv
-archived_data/electricity_accounts.json
+# archived_data/daily_usage.csv
+# archived_data/half_hourly_readings.csv
+# archived_data/electricity_accounts.json

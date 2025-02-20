@@ -81,7 +81,7 @@ def calculate_daily_usage(meter_accounts, meter_readings):
         account = next((meter for meter in meter_accounts if meter.meter_id == meter_id), None)
 
         daily_usage = readings[-1].electricity_reading - readings[0].electricity_reading
-        daily_usage_data.append([meter_id, account.region, account.area, readings[0].date, daily_usage])
+        daily_usage_data.append([meter_id, account.region, account.area, account.dwelling_type, readings[0].date, daily_usage])
 
     daily_exists = os.path.exists(daily_file)
 
@@ -91,7 +91,7 @@ def calculate_daily_usage(meter_accounts, meter_readings):
             
             # If file is newly created, write the header
             if not daily_exists:
-                writer.writerow(["Meter_id", "Region", "Area", "Date", "Daily_Usage (kWh)"])
+                writer.writerow(["Meter_id", "Region", "Area", "Dwelling_type", "Date", "Daily_Usage (kWh)"])
             
             for row in daily_usage_data:
                 writer.writerow(row)
@@ -119,7 +119,7 @@ def calculate_monthly_usage():
     if os.path.exists(monthly_file):
         monthly_df = pd.read_csv(monthly_file)
     else:
-        monthly_df = pd.DataFrame(columns=["Meter_id", "Region", "Area", "Month", "Monthly_Usage (kWh)"])
+        monthly_df = pd.DataFrame(columns=["Meter_id", "Region", "Area", "Dwelling_type", "Month", "Monthly_Usage (kWh)"])
 
     df_month = df[df["Date"] == current_month]
 
@@ -142,6 +142,7 @@ def calculate_monthly_usage():
                 "Meter_id": meter_id,
                 "Region": df_month_id.iloc[0]["Region"],
                 "Area": df_month_id.iloc[0]["Area"],
+                "Dwelling_type": df_month_id.iloc[0]["Dwelling_type"],
                 "Month": current_month,
                 "Monthly_Usage (kWh)": monthly_usage
             }
