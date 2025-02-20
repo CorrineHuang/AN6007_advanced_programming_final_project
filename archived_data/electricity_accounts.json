@@ -4,5 +4,11 @@
         "area": "Jurong",
         "region": "West",
         "dwelling_type": "aaa"
+    },
+    {
+        "meter_id": "666-777-866",
+        "area": "NTU",
+        "region": "Jurong",
+        "dwelling_type": "x"
     }
 ]
