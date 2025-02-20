@@ -1,3 +1,0 @@
-# THIS FILE WILL HOLD ALL THE ASSUMPTIONS USED FOR THE SYSTEM CREATED
-
-1. Assume all accounts are valid. No need to validate
